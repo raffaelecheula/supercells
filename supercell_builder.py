@@ -90,6 +90,7 @@ class Supercell:
         self.k_points          = [1, 1, 1]
         self.scale_kp          = None
         self.epsi              = 1e-4
+        self.height            = None
         self.dir_self = dir(self) + ['dir_self', 'kwargs', 'self']
         locals().update(kwargs)
         self.__dict__.update(locals())
@@ -158,6 +159,10 @@ class Supercell:
 
         if input_bulk is not None:
             system = read(input_bulk[0], format = input_bulk[1])
+            #if input_bulk[1] in ('espresso-out', 'out'):
+            #    system = read_quantum_espresso_out(input_bulk[0])
+            #else:
+            #    system = read(input_bulk[0], format = input_bulk[1])
 
         elif bulk_type is 'simple_cubic':
             cell = [[lattice_constants[0], 0., 0.],
@@ -223,10 +228,11 @@ class Supercell:
 #-------------------------------------------------------------------------------
 
         if input_slab:
-            if input_slab[1] in ('espresso-out', 'out'):
-                system = read_quantum_espresso_out(input_slab[0])
-            else:
-                system = read(input_slab[0], format = input_slab[1])
+            system = read(input_slab[0], format = input_slab[1])
+            #if input_slab[1] in ('espresso-out', 'out'):
+            #    system = read_quantum_espresso_out(input_slab[0])
+            #else:
+            #    system = read(input_slab[0], format = input_slab[1])
             system.center(vacuum = 0., axis = 2)
             system *= (dim[0], dim[1], 1)
 
@@ -474,12 +480,16 @@ def cut_supercell(system, cut_top, cut_bottom, vacuum, epsi):
 
     if vacuum is not None:
         system.center(vacuum = 0., axis = 2)
+        #cut_top += vacuum / 2.
+        #cut_bottom += vacuum / 2.
 
     if cut_top:
         print('deleted top atoms:', len([ a.index for a in system \
             if a.position[2] > cut_top + epsi ]))
+            #if a.position[2] > system.cell[2][2] - cut_top + epsi ]))
         del system [[ a.index for a in system \
             if a.position[2] > cut_top + epsi ]]
+            #if a.position[2] > system.cell[2][2] - cut_top + epsi ]]
 
     if cut_bottom:
         print('deleted bottom atoms:', len([ a.index for a in system \
@@ -686,6 +696,8 @@ def check_inversion_symmetry(system, base_boundary = False,
         for b in system:
             equal = np.allclose(a_check, b.position, 
                                 rtol = 1e-02, atol = 1e-03)
+            #equal = np.array_equal(np.around(a_check, decimals = 3),
+            #                       np.around(b.position, decimals = 3))
             if equal is True:
                 cont += 1
                 equal_check = True
@@ -714,11 +726,26 @@ def create_inversion_symmetry(system, base_boundary = False,
     system_plus = boundary_atoms(system, base_boundary = False,
                                  outer_boundary = False)
 
+    #c_matrix = np.array([[0., 0., 0.]])
+    #for a in system_plus:
+    #    for b in system_plus:
+    #        if b.symbol == a.symbol and b.index >= a.index:
+    #            c = (a.position + b.position) / 2.
+    #            c_matrix = np.append(c_matrix, [c], axis = 0)
+
     c_matrix = np.array([ ((a.position + b.position) / 2.) for a in \
         system_plus for b in system_plus if b.symbol == a.symbol and \
         b.index >= a.index ])
 
     print('number of centres =', len(c_matrix))
+
+    #indices = np.zeros(len(c_matrix), dtype = int)
+    #for i in range(1, len(c_matrix)):
+    #    for j in range(i, len(c_matrix)):
+            #if np.allclose(c_matrix[i], c_matrix[j], rtol=1e-02, atol=1e-03):
+    #        if np.array_equal(np.around(c_matrix[i], decimals = 3),
+    #                          np.around(c_matrix[j], decimals = 3)):
+    #            indices[i] += 1
 
     indices = np.array([ len([ j for j in range(i, len(c_matrix)) if \
             np.array_equal(np.around(c_matrix[i], decimals = 3),
@@ -998,15 +1025,17 @@ def scale_kpoints(system, k_points, unit_kp, scale_kp, epsi = 1e-4):
 #                            WULFF CONSTRUCTION
 ################################################################################
 
-def Wulff_construction(system, size, diameter, surface_energy_dict,
+def Wulff_construction(bulk, size, diameter, surface_energy_dict,
                        adhesion_energy_dict = None,
                        fill_the_vacuum = False,
                        vacuum_symbol = 'X',
                        fill_the_support = True,
                        support_symbol = 'S'):
 
+    system = cp.deepcopy(bulk)
     cell_vectors = system.cell
     system *= size
+    #system.translate(-np.dot(cell_vectors, np.divide(size, 2)))
     system.translate(( - system.cell[0] - system.cell[1] - \
                       system.cell[2]) / 2.)
 
@@ -1048,6 +1077,7 @@ def Wulff_construction(system, size, diameter, surface_energy_dict,
                     diameter / 2 * adhesion_energy_dict[support_index[0]]:
                     a.symbol = support_symbol
 
+    #system.translate(np.dot(np.divide(system.cell, 2), (1, 1, 1)))
     system.translate((system.cell[0] + system.cell[1] + system.cell[2]) / 2.)
 
     return system
@@ -1094,6 +1124,85 @@ def create_interface_slab(support, system, inter_dist):
     if base is False:
         system.center(vacuum = (system_height + support_height + 2. * \
                       inter_dist  - system.cell[2][2]) / 2., axis = 2)
+
+    return system
+
+################################################################################
+#                         READ QUANTUM ESPRESSO OUT
+################################################################################
+
+def read_quantum_espresso_out(fileobj):
+
+    system = Atoms(pbc = (True, True, True))
+    fileobj = open(fileobj, 'rU')
+    lines = fileobj.readlines()
+
+    atomic_positions = 'angstrom'
+    for i in range(len(lines)):
+        if 'ATOMIC_POSITIONS (crystal)' in lines[i]:
+            atomic_positions = 'crystal'
+
+    for number, line in enumerate(lines):
+        key = 'celldm(1)'
+        if key in line:
+            break
+    line = lines[number]
+    celldm = float(line.split()[1]) * Bohr
+
+    for number, line in enumerate(lines):
+        key = 'crystal axes: (cart. coord. in units of alat)'
+        if key in line:
+            break
+
+    i = 0
+    cell = np.zeros((3, 3))
+    for line in lines[number + 1 : number + 4]:
+        entries = line.split()
+        cell[i][0] = float(entries[3]) * celldm
+        cell[i][1] = float(entries[4]) * celldm
+        cell[i][2] = float(entries[5]) * celldm
+        i += 1
+    system.set_cell(cell)
+
+    for number, line in enumerate(lines):
+        key = 'Begin final coordinates'
+        if key in line:
+            break
+
+    i = 0
+    if str(lines[number + 3].split()[0]) == 'CELL_PARAMETERS':
+        for line in lines[number + 4 : number + 7]:
+            entries = line.split()
+            cell[i][0] = float(entries[0])
+            cell[i][1] = float(entries[1])
+            cell[i][2] = float(entries[2])
+            i += 1
+        system.set_cell(cell)
+        number += 6
+
+    i = 0
+    indices = []
+    for line in lines[number + 3 :]:
+        entries = line.split()
+        if entries[0] == 'End':
+            break
+        symbol = entries[0]
+        x = float(entries[1])
+        y = float(entries[2])
+        z = float(entries[3])
+
+        if atomic_positions is 'crystal':
+            x = x * cell[0][0] + y * cell[1][0] + z * cell[2][0]
+            y = x * cell[0][1] + y * cell[1][1] + z * cell[2][1]
+            z = x * cell[0][2] + y * cell[1][2] + z * cell[2][2]
+
+        system += Atom(symbol, (x, y, z))
+
+        if len(entries) is 7:
+            indices.append(i)
+        i += 1
+
+    system.set_constraint(FixAtoms(indices = indices))
 
     return system
 
