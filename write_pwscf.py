@@ -118,7 +118,7 @@ class Kpoints:
 
 def get_atom_list(atoms):
     symbol = atoms.get_chemical_symbols()
-    if len (symbol) > 1:
+    if len(symbol) > 1:
         for i in range(len(symbol)-1, 0, -1):
             for j in range(i):
                 if symbol[j] == symbol[i]:
