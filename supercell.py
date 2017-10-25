@@ -18,7 +18,7 @@ sc = Supercell()
 
 sc.bulk_type         = 'fcc'
 sc.elements          = 'Rh'
-sc.lattice_constants = 3.863872
+sc.lattice_constants = 3.83
 
 sc.input_slab        = None
 sc.miller_index      = '100'
@@ -32,7 +32,7 @@ sc.cut_top           = None
 sc.cut_bottom        = None
 sc.vacuum            = 10.
 
-sc.adsorbates        = (CO, 'hollow', 1, 1.5)
+sc.adsorbates        = (CO, 'top', 1, 1.5)
 sc.vacancies         = None
 sc.units             = 'final_cell'
 sc.break_sym         = False
@@ -52,28 +52,36 @@ k_points = sc.k_points
 
 qe = PWscf()
 
-# CONTROL
+# --- CONTROL -----------------------------------------------------------------
+
 qe.control.calculation           = 'relax'
 qe.control.restart_mode          = 'from_scratch'
 qe.control.forc_conv_thr         = 1.0e-3
 qe.control.etot_conv_thr         = 1.0e-4
 qe.control.max_seconds           = 1700
-qe.control.prefix                = 'calc'
+qe.control.prefix                = 'pwscf'
 qe.control.outdir                = './tmp/'
 qe.control.nstep                 = 1000
 
-# SYSTEM
+# --- SYSTEM ------------------------------------------------------------------
+
 qe.system.ecutwfc                = 35.
 qe.system.ecutrho                = 280.
 qe.system.occupations            = 'smearing'
 qe.system.smearing               = 'mv'
 qe.system.degauss                = 0.001
+qe.system.vdw_corr               = 'grimme-d3'
+#qe.system.input_dft              = 'vdw-df2'
+#qe.system.nspin                  = 2
+#qe.system.lda_plus_u             = True
 
-# LDA+U & MAGNETIZATION
+# --- LDA+U & MAGNETIZATION ---------------------------------------------------
+
 qe.lda_plus_u.u_dict             = {'Rh':3.5} # dictionary for U parameters
 qe.magnet.mag_dict               = {'Rh':1.} # dictionary for magnetization
 
-# ELECTRONS
+# --- ELECTRONS ---------------------------------------------------------------
+
 qe.electrons.conv_thr            = 1.0e-6
 qe.electrons.diagonalization     = 'david'
 qe.electrons.diago_david_ndim    = 2
@@ -81,18 +89,22 @@ qe.electrons.mixing_beta         = 0.2
 qe.electrons.mixing_mode         = 'local-TF'
 qe.electrons.electron_maxstep    = 500
 
-# IONS
+# --- IONS --------------------------------------------------------------------
+
 qe.ions.ion_dynamics             = 'bfgs'
 
-# CELL
+# --- CELL --------------------------------------------------------------------
+
 qe.cell.cell_dynamics            = 'bfgs'
 qe.cell.cell_dofree              = 'z'
 
-# K POINTS
+# --- K POINTS ----------------------------------------------------------------
+
 qe.kpoints.nk                    = k_points
 qe.kpoints.type                  = 'automatic'
 
-# ATOMIC POSITIONS
+# --- ATOMIC POSITIONS --------------------------------------------------------
+
 qe.atomic_positions.type         = 'angstrom'
 
 ################################################################################
