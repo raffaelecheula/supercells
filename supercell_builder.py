@@ -100,11 +100,6 @@ class Slab:
         layers = int(layers)
 
         miller_index = convert_miller_index(miller_index, low_index = False)
-        #low_miller_index = ('100', '110', '111', '0001')
-        #if isinstance(miller_index, str) and miller_index not in low_miller_index:
-        #    miller_index = list(miller_index)
-        #    for i in range(len(miller_index)):
-        #        miller_index[i] = int(miller_index[i])
         
         if isinstance(miller_index, list):
             miller_index = tuple(miller_index)
@@ -374,11 +369,11 @@ class Vacancy:
 # CONVERT MILLER INDEX
 ################################################################################
 
-def convert_miller_index(miller_index, low_index = True):
+def convert_miller_index(miller_index, low_index = True,
+                         low_miller_index = ['100', '110', '111', '0001']):
 
-    low_miller_index = ('100', '110', '111', '0001')
     if isinstance(miller_index, str):
-        if low_index is True or miller_index not in low_miller_index:
+        if low_index is True or [miller_index] not in low_miller_index:
             miller_index = list(miller_index)
             for i in range(len(miller_index)):
                 miller_index[i] = int(miller_index[i])
