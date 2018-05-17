@@ -445,6 +445,28 @@ def update_pseudos(pseudos, filename):
     return dict(pseudos.items() + pseudos_new.items())
 
 ################################################################################
+# ATOMS NOT FIXED
+################################################################################
+
+def atoms_fixed(atoms):
+
+    fixed = np.concatenate([ a.__dict__['index'] for a in atoms.constraints if \
+                             a.__class__.__name__ == 'FixAtoms' ])
+
+    return fixed
+
+################################################################################
+# ATOMS NOT FIXED
+################################################################################
+
+def atoms_not_fixed(atoms):
+
+    fixed = atoms_fixed(atoms)
+    not_fixed = [ i for i in range(len(atoms)) if i not in fixed ]
+    
+    return not_fixed
+
+################################################################################
 # MERGE SUPERCELLS
 ################################################################################
 

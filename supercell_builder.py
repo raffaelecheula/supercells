@@ -15,7 +15,7 @@ from ase.constraints import FixAtoms
 
 print('\n'
 "########################################################################\n"
-"# SUPERCELL BUILDER version 0.1.1                                       \n"
+"# SUPERCELL BUILDER version 0.1.2                                       \n"
 "# Distributed under the GPLv3 license                                   \n"
 "# Author: Raffaele Cheula                                               \n"
 "# raffaele.cheula@polimi.it                                             \n"
@@ -112,12 +112,12 @@ class Slab:
                                                     bulk.bulk_type,
                                                     miller_index)
 
+        repetitions = (1, 1)
         if surface_vectors:
             vector_a = np.dot(surface_vectors[0], dimensions[0])
             vector_b = np.dot(surface_vectors[1], dimensions[1])
-            dimensions = (1, 1)
         else:
-            dimensions = (int(dimensions[0]), int(dimensions[1]))
+            repetitions = (int(dimensions[0]), int(dimensions[1]))
 
         if input_slab:
             atoms = import_slab_structure(input_slab, dimensions)
@@ -127,7 +127,7 @@ class Slab:
                                          bulk.elements,
                                          bulk.lattice_constants,
                                          miller_index,
-                                         dimensions,
+                                         repetitions,
                                          layers)
 
         if surface_vectors:
@@ -214,8 +214,8 @@ class Slab:
     #  CUT SURFACE
     # -------------------------------------------------------------------
 
-    def cut_surface(self, surface_vectors, big_dim = None,
-                    origin = [0., 0.], epsi = 1e-5):
+    def cut_slab(self, surface_vectors, big_dim = None,
+                 origin = [0., 0.], epsi = 1e-5):
     
         vector_a, vector_b = surface_vectors
         atoms = cut_surface(self.atoms, vector_a, vector_b, big_dim,
@@ -233,7 +233,7 @@ class Slab:
     #  CUT TOP SLAB
     # -------------------------------------------------------------------
 
-    def cut_top_slab(self, cut_top, starting = 'from_slab_bottom',
+    def cut_top_slab(self, cut_top, starting = 'from slab bottom',
                      vacuum = None, epsi = 1e-5):
     
         atoms = cut_top_slab(self.atoms, cut_top, starting,
@@ -243,7 +243,7 @@ class Slab:
     #  CUT BOTTOM SLAB
     # -------------------------------------------------------------------
 
-    def cut_bottom_slab(self, cut_bottom, starting = 'from_slab_bottom',
+    def cut_bottom_slab(self, cut_bottom, starting = 'from slab bottom',
                         vacuum = None, epsi = 1e-5):
     
         atoms = cut_bottom_slab(self.atoms, cut_bottom, starting,
@@ -337,7 +337,7 @@ class Adsorbate:
                  atoms,
                  position = None,
                  distance = 1.,
-                 units    = 'unit_cell',
+                 units    = 'unit cell',
                  site     = None,
                  sector   = None):
 
@@ -357,8 +357,8 @@ class Vacancy:
     def __init__(self,
                  position,
                  distance = 0.,
-                 starting = 'from_slab_top',
-                 units    = 'unit_cell'):
+                 starting = 'from slab top',
+                 units    = 'unit cell'):
 
         self.position = position
         self.distance = distance
@@ -373,12 +373,11 @@ def convert_miller_index(miller_index, low_index = True,
                          low_miller_index = ['100', '110', '111', '0001']):
 
     if isinstance(miller_index, str):
-        if low_index is True or [miller_index] not in low_miller_index:
+        if low_index is True or miller_index not in low_miller_index:
             miller_index = list(miller_index)
             for i in range(len(miller_index)):
                 miller_index[i] = int(miller_index[i])
-
-    miller_index = tuple(miller_index)
+            miller_index = tuple(miller_index)
 
     return miller_index
 
@@ -398,7 +397,7 @@ def import_bulk_structure(input_bulk):
 
 def build_bulk_structure(bulk_type, elements, lattice_constants):
 
-    if bulk_type is 'simple_cubic':
+    if bulk_type == 'simple cubic':
 
         cell = [[lattice_constants[0], 0., 0.],
                 [0., lattice_constants[0], 0.], 
@@ -407,7 +406,7 @@ def build_bulk_structure(bulk_type, elements, lattice_constants):
         atoms = Atoms(elements[0], scaled_positions = [[0., 0., 0.]],
                       cell = cell, pbc = True)
 
-    elif bulk_type is 'fcc_reduced':
+    elif bulk_type == 'fcc reduced':
 
         a_lat = lattice_constants[0] / sqrt(2.)
 
@@ -440,7 +439,7 @@ def build_bulk_structure(bulk_type, elements, lattice_constants):
 
 def custom_bulk(bulk_type, elements, lattice_constants):
 
-    if bulk_type is 'corundum':
+    if bulk_type == 'corundum':
         dim_cell = (3, 3, 12)
         basis = [[1., 2., 0.], [2., 1., 0.], [0., 2., 1.],
                  [1., 1., 1.], [2., 0., 1.], [0., 0., 2.],
@@ -456,7 +455,7 @@ def custom_bulk(bulk_type, elements, lattice_constants):
                       0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1)
         bulk_str = 'hexagonal'
 
-    elif bulk_type is 'rutile':
+    elif bulk_type == 'rutile':
         dim_cell = (6, 6, 2)
         basis = [[0.00, 0.00, 0.00], [1.85, 4.15, 0.00],
                  [4.15, 1.85, 0.00], [1.15, 1.15, 1.00],
@@ -464,7 +463,7 @@ def custom_bulk(bulk_type, elements, lattice_constants):
         elem_basis = (0, 1, 1, 1, 0, 1)
         bulk_str = 'tetragonal'
 
-    elif bulk_type is 'graphene':
+    elif bulk_type == 'graphene':
         dim_cell = (3, 3, 2)
         basis = [[0., 0., 0.], [1., 2., 0.],
                  [0., 0., 1.], [2., 1., 1.]]
@@ -476,25 +475,25 @@ def custom_bulk(bulk_type, elements, lattice_constants):
         for j in range(3):
             bravais[i][j] = basis[i][j] / float(dim_cell[j])
 
-    if bulk_str is 'cubic':
+    if bulk_str == 'cubic':
         from ase.lattice.cubic import SimpleCubicFactory
         class CustomCellFactory(SimpleCubicFactory):
             bravais_basis = bravais
             element_basis = elem_basis
 
-    elif bulk_str is 'hexagonal':
+    elif bulk_str == 'hexagonal':
         from ase.lattice.hexagonal import HexagonalFactory
         class CustomCellFactory(HexagonalFactory):
             bravais_basis = bravais
             element_basis = elem_basis
 
-    elif bulk_str is 'tetragonal':
+    elif bulk_str == 'tetragonal':
         from ase.lattice.triclinic import TriclinicFactory
         class CustomCellFactory(SimpleTetragonalFactory):
             bravais_basis = bravais
             element_basis = elem_basis
 
-    elif bulk_str is 'triclinic':
+    elif bulk_str == 'triclinic':
         from ase.lattice.tetragonal import SimpleTetragonalFactory
         class CustomCellFactory(TriclinicFactory):
             bravais_basis = bravais
@@ -586,7 +585,7 @@ def build_slab_structure(atoms, bulk_type, elements, lattice_constants,
 
 def automatic_vectors(surface_vectors, bulk_type, miller_index):
 
-    if bulk_type is 'fcc':
+    if bulk_type == 'fcc':
         if miller_index == (1, 0, 0):
             surface_vectors = [[0.5, 0.5], [-0.5, 0.5]]
         elif miller_index == (1, 1, 0):
@@ -612,7 +611,7 @@ def automatic_vectors(surface_vectors, bulk_type, miller_index):
         else:
             surface_vectors = None
 
-    elif bulk_type is 'corundum':
+    elif bulk_type == 'corundum':
         if miller_index == (0, 0, 1):
             surface_vectors = [[1., 0.], [0., 1.]]
         if miller_index == (1, -1, 2):
@@ -673,11 +672,11 @@ def cut_surface(atoms, vector_a = [1., 0.], vector_b = [0., 1.],
 
 def rotate_slab(atoms, rotation_angle):
 
-    if rotation_angle is 'automatic':
+    if rotation_angle == 'automatic':
         rotation_angle = -atan(atoms.cell[0][1]/atoms.cell[0][0])*180/pi
         atoms.rotate(rotation_angle, v = 'z', rotate_cell = True)
 
-    elif rotation_angle is 'invert_axis':
+    elif rotation_angle == 'invert axis':
         atoms = rotate_slab(atoms, 'automatic')
         rotation_angle = 90 + atan(atoms.cell[1][0]/atoms.cell[1][1])*180/pi
         atoms.rotate(rotation_angle, v = 'z', rotate_cell = True)
@@ -734,10 +733,10 @@ def sort_slab(atoms):
 # CUT TOP SLAB
 ################################################################################
 
-def cut_top_slab(atoms, cut_top, starting = 'from_slab_top',
+def cut_top_slab(atoms, cut_top, starting = 'from slab top',
                  vacuum = None, epsi = 1e-5):
 
-    if starting in ('from_slab_bottom', 'from_slab_top'):
+    if starting in ('from slab bottom', 'from slab top'):
         if vacuum is None:
             cell_height = atoms.cell[2][2]
             atoms.center(vacuum = 0., axis = 2)
@@ -745,9 +744,9 @@ def cut_top_slab(atoms, cut_top, starting = 'from_slab_top',
         else:
             atoms.center(vacuum = 0., axis = 2)
 
-    if starting in ('from_slab_bottom', 'from_cell_bottom'):
+    if starting in ('from slab bottom', 'from cell bottom'):
         cut_height = cut_top + epsi
-    elif starting in ('from_slab_top', 'from_cell_top'):
+    elif starting in ('from slab top', 'from cell top'):
         cut_height = atoms.cell[2][2] - cut_top + epsi
 
     print('deleted top atoms:', len([ a.index for a in atoms \
@@ -763,10 +762,10 @@ def cut_top_slab(atoms, cut_top, starting = 'from_slab_top',
 # CUT BOTTOM SLAB
 ################################################################################
 
-def cut_bottom_slab(atoms, cut_bottom, starting = 'from_slab_bottom',
+def cut_bottom_slab(atoms, cut_bottom, starting = 'from slab bottom',
                     vacuum = None, epsi = 1e-5):
 
-    if starting in ('from_slab_bottom', 'from_slab_top'):
+    if starting in ('from slab bottom', 'from slab top'):
         if vacuum is None:
             cell_height = atoms.cell[2][2]
             atoms.center(vacuum = 0., axis = 2)
@@ -774,9 +773,9 @@ def cut_bottom_slab(atoms, cut_bottom, starting = 'from_slab_bottom',
         else:
             atoms.center(vacuum = 0., axis = 2)
 
-    if starting in ('from_slab_bottom', 'from_cell_bottom'):
+    if starting in ('from slab bottom', 'from cell bottom'):
         cut_height = cut_bottom - epsi
-    elif starting in ('from_slab_top', 'from_cell_top'):
+    elif starting in ('from slab top', 'from cell top'):
         cut_height = atoms.cell[2][2] - cut_bottom - epsi
 
     print('deleted bottom atoms:', len([ a.index for a in atoms \
@@ -1046,7 +1045,7 @@ def standard_adsorbate(adsorbate, bulk_type = None, miller_index = None):
                [[], [], [], []],
                [[], [], [], []]]
 
-    if miller_index in ('111', '0001') and adsorbate is 'hollow':
+    if miller_index in ('111', '0001') and adsorbate == 'hollow':
         adsorbates[1] = 'fcc'
 
     site = {'top':0, 'bridge':1, 'longbridge':1, 'shortbridge':2,
@@ -1058,7 +1057,7 @@ def standard_adsorbate(adsorbate, bulk_type = None, miller_index = None):
         num = adsorbate.sector
 
     adsorbate.position = pos[site[adsorbate.site]][num]
-    adsorbate.units = 'unit_cell'
+    adsorbate.units = 'unit cell'
 
     return adsorbate
 
@@ -1071,20 +1070,22 @@ def add_adsorbate(atoms, adsorbate, symmetry = None, dimensions = (1, 1),
                   vacuum = None):
 
     if symmetry in ('planar', 'inversion'):
-        adsorbate_height = slab_height + (atoms.cell[2][2] - slab_height) / 2.
+        adsorbate_height = slab_height + (atoms.cell[2][2] - slab_height)/2.
     else:
-        adsorbate_height = slab_height + vacuum / 2.
+        adsorbate_height = slab_height + vacuum/2.
 
     if adsorbate.site:
         adsorbate = standard_adsorbate(adsorbate, bulk_type, miller_index)
 
     if adsorbate.units in ('A', 'angstrom'):
         units = ((1., 0.), (0., 1.))
-    elif adsorbate.units is 'slab_cell':
+    elif adsorbate.units == 'slab cell':
         units = (atoms.cell[0][:2], atoms.cell[1][:2])
-    elif adsorbate.units is 'unit_cell':
+    elif adsorbate.units == 'unit cell':
         units = (atoms.cell[0][:2] / dimensions[0],
                  atoms.cell[1][:2] / dimensions[1])
+    else:
+        raise NameError('Wrong adsorbate.units keyword')
 
     ads = cp.deepcopy(adsorbate.atoms)
 
@@ -1094,14 +1095,14 @@ def add_adsorbate(atoms, adsorbate, symmetry = None, dimensions = (1, 1),
 
     atoms += ads
 
-    if symmetry is 'planar':
+    if symmetry == 'planar':
     
         ads_sym = cp.deepcopy(ads)
         for a in ads_sym:
             a.position[2] = atoms.cell[2][2] - a.position[2]
         atoms += ads_sym
 
-    elif symmetry is 'inversion':
+    elif symmetry == 'inversion':
     
         ads_sym = cp.deepcopy(ads)
         for a in ads_sym:
@@ -1121,13 +1122,15 @@ def add_vacancy(atoms, vacancy, symmetry = None, dimensions = (1, 1),
 
     if vacancy.units in ('A', 'angstrom'):
         units = ((1., 0.), (0., 1.))
-    elif vacancy.units is 'slab_cell':
+    elif vacancy.units == 'slab cell':
         units = (atoms.cell[0][:2], atoms.cell[1][:2])
-    elif vacancy.units is 'unit_cell':
+    elif vacancy.units == 'unit cell':
         units = (atoms.cell[0][:2] / dimensions[0],
                  atoms.cell[1][:2] / dimensions[1])
+    else:
+        raise NameError('Wrong vacancy.units keyword')
 
-    if vacancy.starting in ('from_slab_bottom', 'from_slab_top'):
+    if vacancy.starting in ('from slab bottom', 'from slab top'):
         if vacuum is None:
             cell_height = atoms.cell[2][2]
             atoms.center(vacuum = 0., axis = 2)
@@ -1135,9 +1138,9 @@ def add_vacancy(atoms, vacancy, symmetry = None, dimensions = (1, 1),
         else:
             atoms.center(vacuum = 0., axis = 2)
 
-    if vacancy.starting in ('from_slab_bottom', 'from_cell_bottom'):
+    if vacancy.starting in ('from slab bottom', 'from cell bottom'):
         vacacy_height = vacancy.distance
-    elif vacancy.starting in ('from_slab_top', 'from_cell_top'):
+    elif vacancy.starting in ('from slab top', 'from cell top'):
         vacancy_height = atoms.cell[2][2] - vacancy.distance
 
     vacancy_pos = (np.dot(vacancy.position, [units[0][0], units[1][0]]),
@@ -1147,12 +1150,12 @@ def add_vacancy(atoms, vacancy, symmetry = None, dimensions = (1, 1),
     del atoms [[ a.index for a in atoms if np.allclose(vacancy_pos,
                  a.position, rtol = 1e-2, atol = 1e-3) ]]
 
-    if symmetry is 'planar':
+    if symmetry == 'planar':
         vacancy_sym[2] = atoms.cell[2][2] - vacancy_height
         del atoms [[ a.index for a in atoms if np.allclose(vacancy_sym,
                      a.position, rtol = 1e-2, atol = 1e-3) ]]
 
-    elif symmetry is 'inversion':
+    elif symmetry == 'inversion':
         vacancy_sym = [sum(atoms.cell[:2])[0] - vacancy_pos[0],
                        sum(atoms.cell[:2])[1] - vacancy_pos[1],
                        atoms.cell[2][2] - vacancy_height]
@@ -1183,7 +1186,7 @@ def calculate_kpts(atoms, cell, kpts, scale_kpts = 'xy', epsi = 1e-4):
     kpts[1] *= np.linalg.norm(cell[1]) / np.linalg.norm(atoms.cell[1])
     kpts[1] = int(np.ceil(kpts[1] - epsi))
 
-    if scale_kpts is 'xyz':
+    if scale_kpts == 'xyz':
         kpts[2] *= cell[2][2] / atoms.cell[2][2]
         kpts[2] = int(np.ceil(kpts[2] - epsi))
     else:
