@@ -392,7 +392,7 @@ def import_bulk_structure(input_bulk):
 
 def build_bulk_structure(bulk_type, elements, lattice_constants):
 
-    if bulk_type == 'simple cubic':
+    if bulk_type == 'cubic':
 
         cell = [[lattice_constants[0], 0., 0.],
                 [0., lattice_constants[0], 0.], 
