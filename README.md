@@ -6,8 +6,8 @@
 
 ### Parameters:
 
-  * **`bulk_type        `** : `'fcc'` - `'bcc'` - `'hcp'` - `'simple cubic'` - `'corundum'` - `'rutile'` - `'graphene'` _{Name of the bulk structure.}_
-  * **`input_bulk       `** : `None` - `'file.in'` _-> If not None, the bulk structure is read from the input file 'file.in'._
+  * **`bulk_type        `** : `'fcc'` - `'bcc'` - `'hcp'` - `'simple cubic'` - `'corundum'` - `'rutile'` - `'graphene'` _# Name of the bulk structure._
+  * **`input_bulk       `** : `None` - `'file.in'` _# If not None, the bulk structure is read from the input file 'file.in'._
   * **`elements         `** : `'element'` - `('element1', 'element2', ...)` _# A list of elements of the bulk structure._
   * **`lattice_constants`** : `a` - `(a, c)` _# Lattice constants of the bulk structure._
   * **`kpts_bulk        `** : `(kpx, kpy, kpz)` _# Grid of k points of the bulk structure._
@@ -54,10 +54,27 @@
 
 **`class Adsorbate(atoms, position, distance, units, site, number, quadrant)`**
 
+### Parameters:
+
   * **`atoms   `** : `atoms` _# An ase.Atoms class instance._
-  * **`position`** : `None` - `(x, y)` _# Position of the adsorbate with units defined in the units attribute._
+  * **`position`** : `None` - `(x, y)` _# Vector position of the adsorbate with units defined in the units attribute._
   * **`distance`** : `None` - `distance` _# Distance from the slab top atom._
   * **`units   `** : `'angstrom'` - `'slab cell'` - `'unit cell'` _# Units for defining the position vectors._
   * **`site    `** : `None` - `'top'` - `'brg'` - `'sbr'` - `'lbr'` - `'hol'` - `'lho'` - `'fcc'` - `'hcp'` _# Name of the standard site of the adsorbate._ 
   * **`number  `** : `None` - `number` _# On high Miller index surfaces, discriminates different adsorption sites with the same name._
   * **`quadrant`** : `None` - `quadrant` _# If not None, translates the Adsorbate to diffenent neighbors unit cells._
+
+## **Vacancy:**
+
+**`class Vacancy(position, distance, starting, units)`**
+
+### Parameters:
+
+  * **`position`** : `(x, y)` _# Vector position of the vacancy with units defined in the units attribute._
+  * **`distance`** : `None` - `distance` _# Distance from the slab top atom._
+  * **`starting`** : `'from slab top'` - `'from slab bottom'` - `'from cell top'` - `'from cell top'` _# Starting z for distance definition._
+  * **`units   `** : `'angstrom'` - `'slab cell'` - `'unit cell'` _# Units for defining the position vectors._
+
+### Authors:
+
+  * Raffaele Cheula (raffaele.cheula@polimi.it)
