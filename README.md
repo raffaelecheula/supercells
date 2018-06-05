@@ -40,15 +40,15 @@
 
 ### Definitions:
 
-  * `cut_slab(surface_vectors, big_dim = None, origin = [0., 0.], epsi = 1e-5)`
-  * `rotate_slab(rotation_angle)`
-  * `cut_top_slab(cut_top, starting = 'from slab bottom', vacuum = None, epsi = 1e-5)`
-  * `cut_bottom_slab(cut_bottom, starting = 'from slab bottom', vacuum = None, epsi = 1e-5)`
-  * `fix_atoms(layers_fixed, layers = None, symmetry = None)`
-  * `add_adsorbates(adsorbates, symmetry = None)`
-  * `add_vacancies(vacancies, symmetry = None)`
-  * `sort_slab()`
-  * `update()`
+  * `cut_slab(surface_vectors, big_dim = None, origin = [0., 0.], epsi = 1e-5)` _# Cut the slab structure with the defined surface vectors parallel to the z direction._
+  * `rotate_slab(rotation_angle)` _# Rotate the slab structure with the defined rotation angle._
+  * `cut_top_slab(cut_top, starting = 'from slab bottom', vacuum = None, epsi = 1e-5)` _# Cut the top of the slab (length calculated from slab bottom, from slab top, from cell bottom, from cell top)._
+  * `cut_bottom_slab(cut_bottom, starting = 'from slab bottom', vacuum = None, epsi = 1e-5)` _# Cut the bottom of the slab (length calculated from slab bottom, from slab top, from cell bottom, from cell top)._
+  * `fix_atoms(layers_fixed, layers = None, symmetry = None)` _# Fix the defined number of layers of the slab._
+  * `add_adsorbates(adsorbates, symmetry = None)` _# Add adsorbates to the slab structure._
+  * `add_vacancies(vacancies, symmetry = None)` _# Create vacancies on the slab structure._
+  * `sort_slab()` _# Sort the atoms of the slab structure with respect to their z position._
+  * `update()` _# Update the slab class instance._
 
 ## **Adsorbate:**
 
@@ -75,6 +75,6 @@
   * **`starting`** : `'from slab top'` - `'from slab bottom'` - `'from cell top'` - `'from cell top'` _# Starting z for distance definition._
   * **`units   `** : `'angstrom'` - `'slab cell'` - `'unit cell'` _# Units for defining the position vectors._
 
-### Authors:
+## Authors:
 
   * Raffaele Cheula (raffaele.cheula@polimi.it)
