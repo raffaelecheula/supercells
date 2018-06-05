@@ -6,11 +6,11 @@
 
 ### Parameters:
 
-  * **`bulk_type        `** : `'fcc'` - `'bcc'` - `'hcp'` - `'simple cubic'` - `'corundum'` - `'rutile'` - `'graphene'` _-> Name of the bulk structure._
+  * **`bulk_type        `** : `'fcc'` - `'bcc'` - `'hcp'` - `'simple cubic'` - `'corundum'` - `'rutile'` - `'graphene'` _{Name of the bulk structure.}_
   * **`input_bulk       `** : `None` - `'file.in'` _-> If not None, the bulk structure is read from the input file 'file.in'._
-  * **`elements         `** : `'element'` - `('element1', 'element2', ...)` _-> A list of elements of the bulk structure._
-  * **`lattice_constants`** : `a` - `(a, c)` _-> Lattice constants of the bulk structure._
-  * **`kpts_bulk        `** : `(kpx, kpy, kpz)` _-> Grid of k points of the bulk structure._
+  * **`elements         `** : `'element'` - `('element1', 'element2', ...)` _# A list of elements of the bulk structure._
+  * **`lattice_constants`** : `a` - `(a, c)` _# Lattice constants of the bulk structure._
+  * **`kpts_bulk        `** : `(kpx, kpy, kpz)` _# Grid of k points of the bulk structure._
 
 ### Definitions:
 
