@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 ################################################################################
 # Raffaele Cheula, LCCP, Politecnico di Milano, raffaele.cheula@polimi.it
@@ -15,20 +15,21 @@ from supercell_builder import Bulk, Slab, Adsorbate, Vacancy
 # BUILD SUPERCELL
 ################################################################################
 
-CO = Atoms(('C', 'O'), ((0., 0., 0.), (0., 0., 1.2)))
+CO = Atoms(('C', 'O'), positions = [(0., 0., 0.), (0., 0., 1.2)])
+O = Atoms(('O'), positions = [(0., 0., 0.)])
 
 bulk_type         = 'fcc'
 input_bulk        = None
 elements          = 'Rh'
-lattice_constants = 3.863872
+lattice_constants = 3.83
 kpts_bulk         = (12, 12, 12)
 
 input_slab        = None
 miller_index      = '211'
-surface_vectors   = 'automatic'
-dimensions        = (2, 2)
-layers            = 4
-layers_fixed      = 3
+surface_vectors   = None
+dimensions        = (1, 2)
+layers            = 3
+layers_fixed      = 2
 symmetry          = 'asymmetric'
 rotation_angle    = 'automatic'
 scale_kpts        = 'xy'
@@ -60,10 +61,14 @@ slab = Slab(bulk              = bulk,
             vacuum            = vacuum,
             sort_atoms        = sort_atoms)
 
+slab.add_adsorbates(Adsorbate(O, site = 'fcc', number = 0, quadrant = 1))
+
 atoms = slab.atoms
-constraints = slab.constraints
 kpts = slab.kpts
 koffset = slab.koffset
+
+atoms.write('pw.xsf')
+atoms.write('pw.xyz')
 
 ################################################################################
 # WRITE QUANTUM ESPRESSO INPUT
