@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 ################################################################################
 # Raffaele Cheula, LCCP, Politecnico di Milano, raffaele.cheula@polimi.it
 ################################################################################
@@ -15,7 +13,7 @@ from ase.constraints import FixAtoms
 
 print('\n'
 "########################################################################\n"
-"# SUPERCELL BUILDER version 0.1.3                                       \n"
+"# SUPERCELL BUILDER version 0.1.5                                       \n"
 "# Distributed under the GPLv3 license                                   \n"
 "# Author: Raffaele Cheula                                               \n"
 "# raffaele.cheula@polimi.it                                             \n"
@@ -98,24 +96,18 @@ class Slab:
                  sort_atoms      = False):
 
         layers = int(layers)
-
-        miller_index = convert_miller_index(miller_index, low_index = False)
         
-        if isinstance(miller_index, list):
-            miller_index = tuple(miller_index)
-
-        if surface_vectors is 'automatic':
+        if surface_vectors == 'automatic':
             if input_slab:
                 surface_vectors = None
             else:
-                surface_vectors = automatic_vectors(surface_vectors,
-                                                    bulk.bulk_type,
+                surface_vectors = automatic_vectors(bulk.bulk_type,
                                                     miller_index)
 
         repetitions = (1, 1)
         if surface_vectors:
-            vector_a = np.dot(surface_vectors[0], dimensions[0])
-            vector_b = np.dot(surface_vectors[1], dimensions[1])
+            surface_vectors = [np.dot(surface_vectors[0], dimensions[0]),
+                               np.dot(surface_vectors[1], dimensions[1])]
         else:
             repetitions = (int(dimensions[0]), int(dimensions[1]))
 
@@ -131,7 +123,7 @@ class Slab:
                                          layers)
 
         if surface_vectors:
-            atoms = cut_surface(atoms, vector_a, vector_b)
+            atoms = cut_surface(atoms, surface_vectors)
 
         if rotation_angle:
             atoms = rotate_slab(atoms, rotation_angle)
@@ -142,9 +134,9 @@ class Slab:
         if cut_bottom:
             atoms = cut_bottom_slab(atoms, cut_bottom, vacuum = 0.)
 
-        if symmetry is 'asymmetric':
+        if symmetry == 'asymmetric':
             atoms = break_symmetry(atoms)
-        elif symmetry is 'inversion':
+        elif symmetry == 'inversion':
             atoms = inversion_symmetry(atoms)
 
         if layers_fixed:
@@ -218,7 +210,7 @@ class Slab:
                  origin = [0., 0.], epsi = 1e-5):
     
         vector_a, vector_b = surface_vectors
-        atoms = cut_surface(self.atoms, vector_a, vector_b, big_dim,
+        atoms = cut_surface(self.atoms, surface_vectors, big_dim,
                             origin, epsi)
 
     # -------------------------------------------------------------------
@@ -270,7 +262,7 @@ class Slab:
             symmetry = self.symmetry
 
         if type(adsorbates) is not list:
-                adsorbates = [adsorbates]
+            adsorbates = [adsorbates]
 
         for adsorbate in adsorbates:
             atoms = add_adsorbate(self.atoms, adsorbate, symmetry, 
@@ -336,17 +328,19 @@ class Adsorbate:
     def __init__(self,
                  atoms,
                  position = None,
-                 distance = 1.,
+                 distance = None,
                  units    = 'unit cell',
                  site     = None,
-                 sector   = None):
+                 number   = 0,
+                 quadrant = 0):
 
         self.atoms    = atoms
         self.position = position
         self.distance = distance
         self.units    = units
         self.site     = site
-        self.sector   = sector
+        self.number   = number
+        self.quadrant = quadrant
 
 ################################################################################
 # ADSORBATE CLASS
@@ -369,15 +363,16 @@ class Vacancy:
 # CONVERT MILLER INDEX
 ################################################################################
 
-def convert_miller_index(miller_index, low_index = True,
-                         low_miller_index = ['100', '110', '111', '0001']):
+def convert_miller_index(miller_index):
 
     if isinstance(miller_index, str):
-        if low_index is True or miller_index not in low_miller_index:
-            miller_index = list(miller_index)
-            for i in range(len(miller_index)):
-                miller_index[i] = int(miller_index[i])
-            miller_index = tuple(miller_index)
+        miller_index = list(miller_index)
+        for i in range(len(miller_index)):
+            miller_index[i] = int(miller_index[i])
+        miller_index = tuple(miller_index)
+    
+    elif isinstance(miller_index, list):
+        miller_index = tuple(miller_index)
 
     return miller_index
 
@@ -411,8 +406,8 @@ def build_bulk_structure(bulk_type, elements, lattice_constants):
         a_lat = lattice_constants[0] / sqrt(2.)
 
         cell = [[a_lat, 0., 0.],
-                [a_lat/2, a_lat*sqrt(3/4), 0.],
-                [a_lat/2, a_lat*sqrt(1/12), a_lat*sqrt(2/3)]]
+                [a_lat/2, a_lat*sqrt(3./4), 0.],
+                [a_lat/2, a_lat*sqrt(1./12), a_lat*sqrt(2./3)]]
 
         atoms = Atoms(elements[0], scaled_positions = [[0., 0., 0.]],
                       cell = cell, pbc = True)
@@ -441,16 +436,16 @@ def custom_bulk(bulk_type, elements, lattice_constants):
 
     if bulk_type == 'corundum':
         dim_cell = (3, 3, 12)
-        basis = [[1., 2., 0.], [2., 1., 0.], [0., 2., 1.],
-                 [1., 1., 1.], [2., 0., 1.], [0., 0., 2.],
-                 [2., 1., 2.], [0., 1., 3.], [1., 0., 3.],
-                 [2., 2., 3.], [0., 0., 4.], [1., 2., 4.],
-                 [0., 2., 5.], [1., 1., 5.], [2., 0., 5.],
-                 [1., 2., 6.], [2., 1., 6.], [0., 1., 7.],
-                 [1., 0., 7.], [2., 2., 7.], [0., 0., 8.],
-                 [2., 1., 8.], [0., 2., 9.], [1., 1., 9.],
-                 [2., 0., 9.], [0., 0., 10.], [1., 2., 10.],
-                 [0., 1., 11.], [1., 0., 11.], [2., 2., 11.]]
+        basis = [[ 1.,  2.,  0.], [ 2.,  1.,  0.], [ 0.,  2.,  1.],
+                 [ 1.,  1.,  1.], [ 2.,  0.,  1.], [ 0.,  0.,  2.],
+                 [ 2.,  1.,  2.], [ 0.,  1.,  3.], [ 1.,  0.,  3.],
+                 [ 2.,  2.,  3.], [ 0.,  0.,  4.], [ 1.,  2.,  4.],
+                 [ 0.,  2.,  5.], [ 1.,  1.,  5.], [ 2.,  0.,  5.],
+                 [ 1.,  2.,  6.], [ 2.,  1.,  6.], [ 0.,  1.,  7.],
+                 [ 1.,  0.,  7.], [ 2.,  2.,  7.], [ 0.,  0.,  8.],
+                 [ 2.,  1.,  8.], [ 0.,  2.,  9.], [ 1.,  1.,  9.],
+                 [ 2.,  0.,  9.], [ 0.,  0., 10.], [ 1.,  2., 10.],
+                 [ 0.,  1., 11.], [ 1.,  0., 11.], [ 2.,  2., 11.]]
         elem_basis = (0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1,
                       0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1)
         bulk_str = 'hexagonal'
@@ -465,10 +460,13 @@ def custom_bulk(bulk_type, elements, lattice_constants):
 
     elif bulk_type == 'graphene':
         dim_cell = (3, 3, 2)
-        basis = [[0., 0., 0.], [1., 2., 0.],
-                 [0., 0., 1.], [2., 1., 1.]]
+        basis = [[0, 0, 0], [1, 2, 0],
+                 [0, 0, 1], [2, 1, 1]]
         elem_basis = (0, 0, 0, 0)
         bulk_str = 'hexagonal'
+
+    else:
+        raise NameError('bulk type "{}" not implemented'.format(bulk_type))
 
     bravais = np.zeros((len(basis), 3))
     for i in range(len(basis)):
@@ -525,53 +523,109 @@ def import_slab_structure(input_slab, dimensions):
 def build_slab_structure(atoms, bulk_type, elements, lattice_constants,
                          miller_index, dimensions, layers):
 
-    if miller_index is '100':
-        if bulk_type is 'fcc':
+    if miller_index == '100':
+        if bulk_type == 'fcc':
             atoms = ase.build.fcc100(elements[0],
                         size   = (dimensions[0], dimensions[1], layers),
                         a      = lattice_constants[0],
                         vacuum = 0.)
-        elif bulk_type is 'bcc':
+        elif bulk_type == 'bcc':
             atoms = ase.build.bcc100(elements[0],
                         size   = (dimensions[0], dimensions[1], layers),
                         a      = lattice_constants[0],
                         vacuum = 0.)
 
-    elif miller_index is '110':
-        if bulk_type is 'fcc':
+    elif miller_index == '110':
+        if bulk_type == 'fcc':
             atoms = ase.build.fcc110(elements[0],
                         size   = (dimensions[0], dimensions[1], layers),
                         a      = lattice_constants[0],
                         vacuum = 0.)
-        elif bulk_type is 'bcc':
+        elif bulk_type == 'bcc':
             atoms = ase.build.bcc110(elements[0],
                         size   = (dimensions[0], dimensions[1], layers),
                         a      = lattice_constants[0],
                         vacuum = 0.)
 
-    elif miller_index is '111':
-        if bulk_type is 'fcc':
+    elif miller_index == '111':
+        if bulk_type == 'fcc':
             atoms = ase.build.fcc111(elements[0],
                         size   = (dimensions[0], dimensions[1], layers),
                         a      = lattice_constants[0],
                         vacuum = 0.)
-        elif bulk_type is 'bcc':
+        elif bulk_type == 'bcc':
             atoms = ase.build.bcc111(elements[0],
                         size   = (dimensions[0], dimensions[1], layers),
                         a      = lattice_constants[0],
                         vacuum = 0.)
 
-    elif miller_index is '0001' and bulk_type is 'hcp':
+    elif miller_index == '0001' and bulk_type == 'hcp':
         atoms = ase.build.hcp0001(elements[0],
                     size   = (dimensions[0], dimensions[1], layers),
                     a      = lattice_constants[0], 
                     c      = lattice_constants[1],
                     vacuum = 0.)
 
+    elif miller_index == '211' and bulk_type == 'fcc':
+        layers = int(ceil(layers*3/2))
+        miller_index = convert_miller_index(miller_index)
+        atoms = build_slab_structure(atoms             = atoms,
+                                     bulk_type         = bulk_type,
+                                     elements          = elements,
+                                     lattice_constants = lattice_constants,
+                                     miller_index      = miller_index,
+                                     dimensions        = (1, 1),
+                                     layers            = layers)
+        if layers % 2:
+            atoms = cut_bottom_slab(atoms      = atoms,
+                                    cut_bottom = 1e-3,
+                                    starting   = 'from slab bottom',
+                                    verbosity  = 'low')
+        surface_vectors = automatic_vectors(bulk_type    = bulk_type,
+                                            miller_index = miller_index)
+        atoms = cut_surface(atoms           = atoms, 
+                            surface_vectors = surface_vectors)
+        atoms *= (dimensions[0], dimensions[1], 1)
+
+    elif miller_index == '311' and bulk_type == 'fcc':
+        layers *= 2
+        miller_index = convert_miller_index(miller_index)
+        atoms = build_slab_structure(atoms             = atoms,
+                                     bulk_type         = bulk_type,
+                                     elements          = elements,
+                                     lattice_constants = lattice_constants,
+                                     miller_index      = miller_index,
+                                     dimensions        = (1, 1),
+                                     layers            = layers)
+
+        surface_vectors = automatic_vectors(bulk_type    = bulk_type,
+                                            miller_index = miller_index)
+        atoms = cut_surface(atoms           = atoms, 
+                            surface_vectors = surface_vectors)
+        atoms *= (dimensions[0], dimensions[1], 1)
+
+    elif miller_index == '331' and bulk_type == 'fcc':
+        layers *= 3
+        miller_index = convert_miller_index(miller_index)
+        atoms = build_slab_structure(atoms             = atoms,
+                                     bulk_type         = bulk_type,
+                                     elements          = elements,
+                                     lattice_constants = lattice_constants,
+                                     miller_index      = miller_index,
+                                     dimensions        = (1, 1),
+                                     layers            = layers)
+
+        surface_vectors = automatic_vectors(bulk_type    = bulk_type,
+                                            miller_index = miller_index)
+        atoms = cut_surface(atoms           = atoms, 
+                            surface_vectors = surface_vectors)
+        atoms *= (dimensions[0], dimensions[1], 1)
+
     else:
+        miller_index = convert_miller_index(miller_index)
         atoms = ase.build.surface(atoms, miller_index, layers)
         for a in atoms:
-            a.position = - a.position
+            a.position = -a.position
         atoms.translate((atoms.cell[0][0] + atoms.cell[1][0],
                          atoms.cell[0][1] + atoms.cell[1][1], 0.))
         atoms.center(vacuum = 0., axis = 2)
@@ -583,44 +637,44 @@ def build_slab_structure(atoms, bulk_type, elements, lattice_constants,
 # AUTOMATIC VECTORS
 ################################################################################
 
-def automatic_vectors(surface_vectors, bulk_type, miller_index):
+def automatic_vectors(bulk_type, miller_index):
 
     if bulk_type == 'fcc':
         if miller_index == (1, 0, 0):
-            surface_vectors = [[0.5, 0.5], [-0.5, 0.5]]
+            surface_vectors = [[+0.5, +0.5], [-0.5, +0.5]]
         elif miller_index == (1, 1, 0):
-            surface_vectors = [[0.5, 0.], [0., 1.]]
+            surface_vectors = [[+0.5, +0.0], [+0.0, +1.0]]
         elif miller_index == (1, 1, 1):
-            surface_vectors = [[0.5, 0.], [0.5, 0.5]]
+            surface_vectors = [[+0.5, +0.0], [+0.5, +0.5]]
         elif miller_index == (2, 1, 0):
-            surface_vectors = [[0.5, 0.5], [0., 1.]]
+            surface_vectors = [[+0.5, +0.5], [+0.0, +1.0]]
         elif miller_index == (2, 1, 1):
-            surface_vectors = [[1., 0.], [0., 0.5]]
+            surface_vectors = [[+1.0, +1.0], [+0.0, +0.5]]
         elif miller_index == (2, 2, 1):
-            surface_vectors = [[1., 0.], [-0.5, 0.5]]
+            surface_vectors = [[+1.0, +0.0], [-0.5, +0.5]]
         elif miller_index == (3, 1, 0):
-            surface_vectors = [[0.5, 0.], [0., 1.]]
+            surface_vectors = [[+0.5, +0.0], [+0.0, +1.0]]
         elif miller_index == (3, 1, 1):
-            surface_vectors = [[0.5, 0.], [0., 0.5]]
+            surface_vectors = [[+0.5, +0.5], [+0.0, +0.5]]
         elif miller_index == (3, 2, 0):
-            surface_vectors = [[0.5, 0.5], [0., 1.]]
+            surface_vectors = [[+0.5, +0.5], [+0.0, +1.0]]
         elif miller_index == (3, 2, 1):
-            surface_vectors = [[0.5, 0.], [-0.5, 1.]]
+            surface_vectors = [[+0.5, +0.0], [-0.5, +1.0]]
         elif miller_index == (3, 3, 1):
-            surface_vectors = [[0.5, 0.], [-0.5, 0.5]]
+            surface_vectors = [[+0.5, +0.0], [-0.5, +0.5]]
         else:
-            surface_vectors = None
+            surface_vectors = [[+1.0, +0.0], [+0.0, +1.0]]
 
     elif bulk_type == 'corundum':
         if miller_index == (0, 0, 1):
-            surface_vectors = [[1., 0.], [0., 1.]]
+            surface_vectors = [[+1.0, +0.0], [+0.0, +1.0]]
         if miller_index == (1, -1, 2):
-            surface_vectors = [[1., 0.], [-1./3., 1./3.]]
+            surface_vectors = [[+1.0, +0.0], [-1/3, +1/3]]
         else:
-            surface_vectors = None
+            surface_vectors = [[+1.0, +0.0], [+0.0, +1.0]]
 
     else:
-        surface_vectors = None # ( TODO: complete for bcc and hcp )
+        surface_vectors = [[+1.0, +0.0], [+0.0, +1.0]] # ( TODO: complete )
 
     return surface_vectors
 
@@ -628,8 +682,10 @@ def automatic_vectors(surface_vectors, bulk_type, miller_index):
 # CUT SURFACE
 ################################################################################
 
-def cut_surface(atoms, vector_a = [1., 0.], vector_b = [0., 1.],
+def cut_surface(atoms, surface_vectors = [[1., 0.], [0., 1.]],
                 big_dim = None, origin = (0., 0.), epsi = 1e-5):
+
+    vector_a, vector_b = surface_vectors
 
     if big_dim is None:
         big_dim = int(ceil(max(vector_a[0], vector_a[1], 
@@ -734,7 +790,7 @@ def sort_slab(atoms):
 ################################################################################
 
 def cut_top_slab(atoms, cut_top, starting = 'from slab top',
-                 vacuum = None, epsi = 1e-5):
+                 vacuum = None, epsi = 1e-5, verbosity = 'high'):
 
     if starting in ('from slab bottom', 'from slab top'):
         if vacuum is None:
@@ -749,8 +805,9 @@ def cut_top_slab(atoms, cut_top, starting = 'from slab top',
     elif starting in ('from slab top', 'from cell top'):
         cut_height = atoms.cell[2][2] - cut_top + epsi
 
-    print('deleted top atoms:', len([ a.index for a in atoms \
-        if a.position[2] > cut_height ]))
+    if verbosity == 'high':
+        print('deleted top atoms:', len([ a.index for a in atoms \
+            if a.position[2] > cut_height ]))
     del atoms [[ a.index for a in atoms if a.position[2] > cut_height ]]
 
     if vacuum:
@@ -763,7 +820,7 @@ def cut_top_slab(atoms, cut_top, starting = 'from slab top',
 ################################################################################
 
 def cut_bottom_slab(atoms, cut_bottom, starting = 'from slab bottom',
-                    vacuum = None, epsi = 1e-5):
+                    vacuum = None, epsi = 1e-5, verbosity = 'high'):
 
     if starting in ('from slab bottom', 'from slab top'):
         if vacuum is None:
@@ -778,8 +835,9 @@ def cut_bottom_slab(atoms, cut_bottom, starting = 'from slab bottom',
     elif starting in ('from slab top', 'from cell top'):
         cut_height = atoms.cell[2][2] - cut_bottom - epsi
 
-    print('deleted bottom atoms:', len([ a.index for a in atoms \
-        if a.position[2] < cut_height ]))
+    if verbosity == 'high':
+        print('deleted bottom atoms:', len([ a.index for a in atoms \
+            if a.position[2] < cut_height ]))
     del atoms [[ a.index for a in atoms if a.position[2] < cut_height ]]
 
     if vacuum:
@@ -1010,53 +1068,92 @@ def check_inversion_symmetry(atoms, base_boundary = False,
 
 def standard_adsorbate(adsorbate, bulk_type = None, miller_index = None):
 
-    pos = [[[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
-           [[0.5, 0.0], [1.5, 0.0], [0.5, 1.0], [1.5, 1.0]],
-           [[0.0, 0.5], [0.0, 1.5], [1.0, 0.5], [1.0, 1.5]],
-           [[0.5, 0.5], [1.5, 0.5], [0.5, 1.5], [1.5, 1.5]],
-           [[1/3, 1/3], [4/3, 1/3], [1/3, 4/3], [1/3, 4/3]],
-           [[2/3, 2/3], [5/3, 2/3], [2/3, 5/3], [2/3, 5/3]]]
+    if bulk_type in ('fcc', 'bcc'):
 
-    if bulk_type is 'bcc' and miller_index is '110':
-        pos[3] = [[1/3, 1/3], [4/3, 1/3], [1/3, 4/3],
-                  [4/3, 4/3]]
+        if miller_index in ('100', (1, 0, 0)):
+            site = {'top':0,
+                    'sbr':1, 'brg':1, 'shortbridge':1, 'bridge':1,
+                    'hol':2, 'hollow':2}
+            pos = [[[0.00, 0.00, +1.50]],                      # top
+                   [[1./2, 0.00, +1.00]],                      # sbr
+                   [[1./2, 1./2, +0.80]]]                      # hol
+            
+        elif miller_index in ('110', (1, 1, 0)):
+            site = {'top':0,
+                    'sbr':1, 'brg':1, 'shortbridge':1, 'bridge':1,
+                    'lbr':2, 'longbridge':2,
+                    'lho':3, 'hol':3, 'longhollow':3, 'hollow':3}
+            pos = [[[0.00, 0.00, +1.50]],                      # top
+                   [[0.00, 1./2, +1.00]],                      # sbr
+                   [[1./2, 0.00, +1.00]],                      # lbr
+                   [[1./2, 1./2, +0.80]]]                      # lho
+            if bulk_type == 'bcc':
+                pos[3] = [[1./3, 1./3, +0.80]]                 # lho
 
-    if miller_index == (2, 1, 1):  # ( TODO: complete )
-        pos = [[[0.0, 0.0], [], [], []],
-               [[0.2, 0.2], [], [], []],
-               [[0.0, 1/4], [], [], []],
-               [[0.2, 0.45], [], [], []],
-               [[], [], [], []],
-               [[], [], [], []]]
+        elif miller_index in ('111', (1, 1, 1)):
+            site = {'top':0,
+                    'sbr':1, 'brg':1, 'shortbridge':1, 'bridge':1,
+                    'fcc':2,
+                    'hcp':3}
+            pos = [[[0.00, 0.00, +1.50]],                      # top
+                   [[1./2, 0.00, +1.00]],                      # sbr
+                   [[1./3, 1./3, +0.80]],                      # fcc
+                   [[2./3, 2./3, +0.80]]]                      # hcp
 
-    if miller_index == (3, 1, 1):  # ( TODO: complete )
-        pos = [[[0.0, 0.0], [], [], []],
-               [[1/3, 1/4], [], [], []],
-               [[0.0, 1/4], [], [], []],
-               [[1/3, 0.5], [], [], []],
-               [[], [], [], []],
-               [[], [], [], []]]
+        if miller_index in ('211', (2, 1, 1)):
+            site = {'top':0,
+                    'sbr':1, 'brg':1, 'shortbridge':1, 'bridge':1,
+                    'hol':2, 'hollow':2,
+                    'fcc':3,
+                    'hcp':4}
+            pos = [[[0.00, 0.00, +2.00], [1./3, 0.00, +0.00],
+                    [2./3, 1./2, +0.80]],                      # top
+                   [[0.00, 1./2, +1.60], [0.22, 0.00, +0.00],
+                    [1./3, 1./2, -0.40], [0.48, 0.24, -0.40],
+                    [2./3, 0.00, +0.20], [0.80, 0.24, +0.40]], # sbr
+                   [[1./6, 1./2, -0.40]],                      # hol
+                   [[1./2, 0.00, -0.40]],                      # fcc
+                   [[0.42, 1./2, -0.40]]]                      # hcp
+    
+        if miller_index in ('311', (3, 1, 1)):
+            site = {'top':0,
+                    'sbr':1, 'brg':1, 'shortbridge':1, 'bridge':1,
+                    'hol':2, 'hollow':2,
+                    'fcc':3,
+                    'hcp':4}
+            pos = [[[0.00, 0.00, +2.00], [0.54, 0.82, +0.80]], # top
+                   [[0.00, 1./2, +1.60], [0.38, 0.52, +0.80],
+                    [0.65, 0.20, +0.60]],                      # sbr
+                   [[0.35, 0.05, +0.30]],                      # hol
+                   [[0.58, 0.36, +0.35]],                      # fcc
+                   [[0.80, 0.20, +0.40]]]                      # hcp
+    
+        if miller_index in ('331', (3, 3, 1)):
+            site = {'top':0,
+                    'sbr':1, 'brg':1, 'shortbridge':1, 'bridge':1,
+                    'fcc':2,
+                    'hcp':3}
+            pos = [[[0.00, 0.00, +2.00], [0.63, 0.32, +1.00],
+                    [1./3, 2./3, +0.40]],                      # top
+                   [[0.00, 0.50, +1.50], [1./3, 0.15, +0.00],
+                    [0.74, 0.62, +0.70], [0.60, 0.75, +0.50],
+                    [0.25, 0.75, +0.40], [0.36, 0.48, +0.35]], # sbr
+                   [[0.80, 0.40, +0.70], [0.20, 0.60, +0.40],
+                    [0.43, 0.73, +0.40]],                      # fcc
+                   [[0.68, 0.84, +0.70]]]                      # hcp
 
-    if miller_index == (3, 3, 1):  # ( TODO: complete )
-        pos = [[[0.0, 0.0], [], [], []],
-               [[0.38, 0.12], [], [], []],
-               [[0.0, 1/4], [], [], []],
-               [[0.38, 0.35], [], [], []],
-               [[], [], [], []],
-               [[], [], [], []]]
+    quadrant_shifts = np.array([[0., 0.], [0., 1.], [1., 1.], [1., 0.],
+                                [0., 2.], [1., 2.], [2., 2.], [2., 1.],
+                                [2., 0.]])
 
-    if miller_index in ('111', '0001') and adsorbate == 'hollow':
-        adsorbates[1] = 'fcc'
+    adsorbate.position = pos[site[adsorbate.site]][adsorbate.number][:2]
+    
+    if adsorbate.quadrant is not None:
+        adsorbate.position += quadrant_shifts[adsorbate.quadrant]
 
-    site = {'top':0, 'bridge':1, 'longbridge':1, 'shortbridge':2,
-            'hollow':3, 'fcc':4, 'hcp':5}
+    if adsorbate.distance is None:
+        adsorbate.distance = pos[site[adsorbate.site]][adsorbate.number][2]
 
-    if adsorbate.sector is None:
-        num = 0
-    else:
-        num = adsorbate.sector
-
-    adsorbate.position = pos[site[adsorbate.site]][num]
     adsorbate.units = 'unit cell'
 
     return adsorbate
