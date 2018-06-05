@@ -19,9 +19,11 @@
 
 ## **Slab:**
 
+### Parameters:
+
 **`class Slab(bulk, input_slab, miller_index, surface_vectors, dimensions, layers, layers_fixed, symmetry, rotation_angle, cut_top, cut_bottom, adsorbates, vacancies, scale_kpts, vacuum, sort_atoms)`**
 
-  * **`bulk           `** : `bulk` _# A supercell_builder.Bulk class instance._
+  * **`bulk           `** : `bulk` _# A supercell_builder.Bulk class instance to build the slab._
   * **`input_slab     `** : `None` - `'file.in'` _# If not None, the slab structure is read from the input file 'file.in'._
   * **`miller_index   `** : `'hkl'` - `(h, k, l)` _# A string or a tuple indicating the sequence of Miller indices to create the slab cutting the bulk structure._
   * **`surface_vectors`** : `None` - `[[xa, ya], [xb, yb]]` _# A list of two surface vectors to cut the slab with vectors perpendicular to the z axis._
