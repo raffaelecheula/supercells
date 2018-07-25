@@ -3,8 +3,7 @@
 ################################################################################
 
 from __future__ import absolute_import, division, print_function
-import ast
-import re
+import ast, re
 import numpy as np
 from math import sin, pi, sqrt, atan, ceil
 from functools import reduce
@@ -12,28 +11,43 @@ from fractions import gcd
 from collections import OrderedDict
 from ase import Atom, Atoms
 from ase.io import read
-from ase.units import kB
+from ase.units import kB, create_units
 from ase.constraints import FixAtoms, FixCartesian
-from ase.units import create_units
 from ase.geometry import get_duplicate_atoms
-from supercell_builder import (cut_surface, rotate_slab,
+from supercell_builder import (cut_surface, rotate_slab, convert_miller_index,
                                check_inversion_symmetry)
 
 ################################################################################
-# GET REDUCE ATOM LIST
+# GET ATOM LIST
 ################################################################################
 
 def get_atom_list(atoms):
 
-    symbol = atoms.get_chemical_symbols()
-    if len(symbol) > 1:
-        for i in range(len(symbol)-1, 0, -1):
+    symbols = atoms.get_chemical_symbols()
+    if len(symbols) > 1:
+        for i in range(len(symbols)-1, 0, -1):
             for j in range(i):
-                if symbol[j] == symbol[i]:
-                    del symbol[i]
+                if symbols[j] == symbols[i]:
+                    del symbols[i]
                     break
 
     return symbol
+
+################################################################################
+# GET ATOM DICT
+################################################################################
+
+def get_atom_dict(atoms):
+
+    atom_dict = {}
+    symbols = atoms.get_chemical_symbols()
+    for symbol in symbols:
+        if symbol in atom_dict:
+            atom_dict[symbol] += 1
+        else:
+            atom_dict[symbol] = 1
+
+    return atom_dict
 
 ################################################################################
 # GET FORMULA UNITS
@@ -443,7 +457,7 @@ def update_pseudos(pseudos, filename):
     return dict(pseudos.items() + pseudos_new.items())
 
 ################################################################################
-# ATOMS NOT FIXED
+# ATOMS FIXED
 ################################################################################
 
 def atoms_fixed(atoms):
@@ -739,6 +753,46 @@ def match_slabs_dimensions_python(cell_a, cell_b, nmax_a, nmax_b, stretch_max,
                                             match_dimensions = True
 
     return vect_a_opt, vect_b_opt, invert_opt, match_dimensions
+
+################################################################################
+# CONVERT SURFACE ENERGY DICT
+################################################################################
+
+def convert_surface_energy_dict(surface_energy_dict):
+
+    miller_list = []
+    e_surf_list = []
+    
+    for miller_index in surface_energy_dict:
+        e_surf_list.append(surface_energy_dict[miller_index])
+        miller_list.append(convert_miller_index(miller_index))
+
+    return miller_list, e_surf_list
+
+################################################################################
+# GET MOMENT OF INERTIA XYZ
+################################################################################
+
+def get_moments_of_inertia_xyz(atoms, center = None):
+
+    if center is None:
+        center = atoms.get_center_of_mass()
+
+    positions = atoms.get_positions()-center
+    masses = atoms.get_masses()
+
+    I = np.zeros(3)
+
+    for i in range(len(atoms)):
+
+        x, y, z = positions[i]
+        m = masses[i]
+
+        I[0] += m * (y**2 + z**2)
+        I[1] += m * (x**2 + z**2)
+        I[2] += m * (x**2 + y**2)
+
+    return I
 
 ################################################################################
 # END
