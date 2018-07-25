@@ -13,7 +13,7 @@ from ase.constraints import FixAtoms
 
 print('\n'
 "########################################################################\n"
-"# SUPERCELL BUILDER version 0.1.5                                       \n"
+"# SUPERCELL BUILDER version 0.1.6                                       \n"
 "# Distributed under the GPLv3 license                                   \n"
 "# Author: Raffaele Cheula                                               \n"
 "# raffaele.cheula@polimi.it                                             \n"
@@ -203,7 +203,7 @@ class Slab:
         self.sort_atoms      = sort_atoms
 
     # -------------------------------------------------------------------
-    #  CUT SURFACE
+    #  CUT SLAB
     # -------------------------------------------------------------------
 
     def cut_slab(self, surface_vectors, big_dim = None,
@@ -253,7 +253,7 @@ class Slab:
         atoms = fix_atoms(self.atoms, layers_fixed, layers, symmetry)
 
     # -------------------------------------------------------------------
-    #  ADD ADSORBATED
+    #  ADD ADSORBATES
     # -------------------------------------------------------------------
 
     def add_adsorbates(self, adsorbates, symmetry = None):
@@ -287,7 +287,7 @@ class Slab:
                                 self.dimensions)
 
     # -------------------------------------------------------------------
-    #  SORT ATOMS
+    #  SORT SLAB
     # -------------------------------------------------------------------
 
     def sort_slab(self):
@@ -343,7 +343,7 @@ class Adsorbate:
         self.quadrant = quadrant
 
 ################################################################################
-# ADSORBATE CLASS
+# VACANCY CLASS
 ################################################################################
 
 class Vacancy:
@@ -1063,7 +1063,7 @@ def check_inversion_symmetry(atoms, base_boundary = False,
     return inversion
 
 ################################################################################
-# STANDARD ADSORBATES
+# STANDARD ADSORBATE
 ################################################################################
 
 def standard_adsorbate(adsorbate, bulk_type = None, miller_index = None):
@@ -1159,7 +1159,7 @@ def standard_adsorbate(adsorbate, bulk_type = None, miller_index = None):
     return adsorbate
 
 ################################################################################
-# ADD ADSORBATES
+# ADD ADSORBATE
 ################################################################################
 
 def add_adsorbate(atoms, adsorbate, symmetry = None, dimensions = (1, 1),
@@ -1211,7 +1211,7 @@ def add_adsorbate(atoms, adsorbate, symmetry = None, dimensions = (1, 1),
     return atoms
 
 ################################################################################
-# ADD VACANCIES
+# ADD VACANCY
 ################################################################################
 
 def add_vacancy(atoms, vacancy, symmetry = None, dimensions = (1, 1),
@@ -1270,7 +1270,7 @@ def add_vacancy(atoms, vacancy, symmetry = None, dimensions = (1, 1),
     return atoms
 
 ################################################################################
-# SCALE KPTS
+# CALCULATE KPTS
 ################################################################################
 
 def calculate_kpts(atoms, cell, kpts, scale_kpts = 'xy', epsi = 1e-4):
