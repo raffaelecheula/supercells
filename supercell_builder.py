@@ -13,7 +13,7 @@ from ase.constraints import FixAtoms
 
 print('\n'
 "########################################################################\n"
-"# SUPERCELL BUILDER version 0.1.6                                       \n"
+"# SUPERCELL BUILDER version 0.1.8                                       \n"
 "# Distributed under the GPLv3 license                                   \n"
 "# Author: Raffaele Cheula                                               \n"
 "# raffaele.cheula@polimi.it                                             \n"
@@ -138,6 +138,10 @@ class Slab:
             atoms = break_symmetry(atoms)
         elif symmetry == 'inversion':
             atoms = inversion_symmetry(atoms)
+        elif symmetry == 'planar' or symmetry is None:
+            pass
+        else:
+            raise NameError('Wrong symmetry keyword')
 
         if layers_fixed:
             atoms = fix_atoms(atoms, layers_fixed, layers, symmetry)
@@ -145,23 +149,31 @@ class Slab:
         atoms.center(vacuum = 0., axis = 2)
         slab_height = atoms.cell[2][2]
 
-        if adsorbates:
-            if type(adsorbates) is not list:
-                adsorbates = [adsorbates]
-            for adsorbate in adsorbates:
-                atoms = add_adsorbate(atoms, adsorbate, symmetry,
-                                      dimensions, bulk.bulk_type,
-                                      miller_index, slab_height,
-                                      vacuum = 0.)
-
         if vacancies:
             if type(vacancies) is not list:
                 vacancies = [vacancies]
             for vacancy in vacancies:
-                atoms = add_vacancy(atoms, vacancy, symmetry, dimensions)
+                atoms = add_vacancy(atoms      = atoms,
+                                    vacancy    = vacancy,
+                                    symmetry   = symmetry,
+                                    dimensions = dimensions,
+                                    vacuum     = vacuum)
+
+        if adsorbates:
+            if type(adsorbates) is not list:
+                adsorbates = [adsorbates]
+            for adsorbate in adsorbates:
+                atoms = add_adsorbate(atoms        = atoms,
+                                      adsorbate    = adsorbate,
+                                      symmetry     = symmetry,
+                                      dimensions   = dimensions,
+                                      bulk_type    = bulk.bulk_type,
+                                      miller_index = miller_index,
+                                      slab_height  = slab_height,
+                                      vacuum       = vacuum)
 
         if vacuum:
-            atoms.center(vacuum = vacuum / 2., axis = 2)
+            atoms.center(vacuum = vacuum/2., axis = 2)
 
         atoms = cut_surface(atoms)
         
@@ -295,6 +307,14 @@ class Slab:
         atoms = sort_slab(self.atoms)
 
     # -------------------------------------------------------------------
+    #  ADD VACUUM
+    # -------------------------------------------------------------------
+
+    def add_vacuum(self, vacuum):
+        
+        self.atoms.center(vacuum = vacuum / 2., axis = 2)
+
+    # -------------------------------------------------------------------
     #  UPDATE
     # -------------------------------------------------------------------
 
@@ -328,18 +348,20 @@ class Adsorbate:
     def __init__(self,
                  atoms,
                  position = None,
+                 height   = None,
                  distance = None,
                  units    = 'unit cell',
                  site     = None,
-                 number   = 0,
+                 variety  = 0,
                  quadrant = 0):
 
         self.atoms    = atoms
         self.position = position
+        self.height   = height
         self.distance = distance
         self.units    = units
         self.site     = site
-        self.number   = number
+        self.variety  = variety
         self.quadrant = quadrant
 
 ################################################################################
@@ -350,13 +372,13 @@ class Vacancy:
 
     def __init__(self,
                  position,
-                 distance = 0.,
-                 starting = 'from slab top',
+                 height   = None,
+                 distance = None,
                  units    = 'unit cell'):
 
         self.position = position
+        self.height   = height
         self.distance = distance
-        self.starting = starting
         self.units    = units
 
 ################################################################################
@@ -382,7 +404,10 @@ def convert_miller_index(miller_index):
 
 def import_bulk_structure(input_bulk):
 
-    atoms = read(input_bulk)
+    from supercell_utils import read_qe_out
+
+    try: atoms = read_qe_out(input_bulk)
+    except: atoms = read(input_bulk)
 
     return atoms
 
@@ -510,7 +535,11 @@ def custom_bulk(bulk_type, elements, lattice_constants):
 
 def import_slab_structure(input_slab, dimensions):
 
-    atoms = read(input_slab)
+    from supercell_utils import read_qe_out
+
+    try: atoms = read_qe_out(input_slab)
+    except: atoms = read(input_slab)
+
     atoms.center(vacuum = 0., axis = 2)
     atoms *= (dimensions[0], dimensions[1], 1)
 
@@ -942,8 +971,8 @@ def inversion_symmetry(atoms, vacuum = None, big_cell_inversion = False):
 
         if sym is not True and big_cell_inversion is True:
             print('\nBIG CELL INVERSION SYMMETRY')
-            origin = (sum(atoms.cell[:2])[0] / 2.,
-                      sum(atoms.cell[:2])[1] / 2.)
+            origin = (sum(atoms.cell[:2])[0]/2.,
+                      sum(atoms.cell[:2])[1]/2.)
             atoms *= (2, 2, 1)
             atoms = create_inversion_symmetry(atoms)
             atoms = cut_surface(atoms,
@@ -958,7 +987,7 @@ def inversion_symmetry(atoms, vacuum = None, big_cell_inversion = False):
             atoms = atoms_inv
 
     if vacuum:
-        atoms.center(vacuum = vacuum / 2., axis = 2)
+        atoms.center(vacuum = vacuum/2., axis = 2)
 
     return atoms
 
@@ -1146,13 +1175,13 @@ def standard_adsorbate(adsorbate, bulk_type = None, miller_index = None):
                                 [0., 2.], [1., 2.], [2., 2.], [2., 1.],
                                 [2., 0.]])
 
-    adsorbate.position = pos[site[adsorbate.site]][adsorbate.number][:2]
+    adsorbate.position = pos[site[adsorbate.site]][adsorbate.variety][:2]
     
     if adsorbate.quadrant is not None:
         adsorbate.position += quadrant_shifts[adsorbate.quadrant]
 
-    if adsorbate.distance is None:
-        adsorbate.distance = pos[site[adsorbate.site]][adsorbate.number][2]
+    if adsorbate.distance is None and adsorbate.height is None:
+        adsorbate.distance = pos[site[adsorbate.site]][adsorbate.variety][2]
 
     adsorbate.units = 'unit cell'
 
@@ -1166,12 +1195,21 @@ def add_adsorbate(atoms, adsorbate, symmetry = None, dimensions = (1, 1),
                   bulk_type = None, miller_index = None, slab_height = None,
                   vacuum = None):
 
-    if symmetry in ('planar', 'inversion'):
-        adsorbate_height = slab_height + (atoms.cell[2][2] - slab_height)/2.
-    else:
-        adsorbate_height = slab_height + vacuum/2.
+    atoms = cut_surface(atoms)
 
-    if adsorbate.site:
+    if vacuum is not None:
+        atoms.center(vacuum = vacuum/2., axis = 2)
+    else:
+        vacuum = 0.
+
+    if adsorbate.height is not None:
+        adsorbate_height = adsorbate.height
+    elif adsorbate.distance is not None:
+        adsorbate_height = atoms.cell[2][2]-vacuum/2.+adsorbate.distance
+    else:
+        raise TypeError('Specify adsorbate height or distance attributes')
+
+    if adsorbate.site is not None:
         adsorbate = standard_adsorbate(adsorbate, bulk_type, miller_index)
 
     if adsorbate.units in ('A', 'angstrom'):
@@ -1179,8 +1217,8 @@ def add_adsorbate(atoms, adsorbate, symmetry = None, dimensions = (1, 1),
     elif adsorbate.units == 'slab cell':
         units = (atoms.cell[0][:2], atoms.cell[1][:2])
     elif adsorbate.units == 'unit cell':
-        units = (atoms.cell[0][:2] / dimensions[0],
-                 atoms.cell[1][:2] / dimensions[1])
+        units = (atoms.cell[0][:2]/dimensions[0],
+                 atoms.cell[1][:2]/dimensions[1])
     else:
         raise NameError('Wrong adsorbate.units keyword')
 
@@ -1188,7 +1226,7 @@ def add_adsorbate(atoms, adsorbate, symmetry = None, dimensions = (1, 1),
 
     ads.translate((np.dot(adsorbate.position, [units[0][0], units[1][0]]),
                    np.dot(adsorbate.position, [units[0][1], units[1][1]]),
-                   adsorbate_height + adsorbate.distance))
+                   adsorbate_height))
 
     atoms += ads
 
@@ -1208,6 +1246,9 @@ def add_adsorbate(atoms, adsorbate, symmetry = None, dimensions = (1, 1),
             a.position[2] = atoms.cell[2][2] - a.position[2]
         atoms += ads_sym
 
+    if vacuum is not None:
+        atoms.center(vacuum = vacuum/2., axis = 2)
+
     return atoms
 
 ################################################################################
@@ -1217,28 +1258,29 @@ def add_adsorbate(atoms, adsorbate, symmetry = None, dimensions = (1, 1),
 def add_vacancy(atoms, vacancy, symmetry = None, dimensions = (1, 1),
                 vacuum = None, epsi = 1e-4):
 
+    atoms = cut_surface(atoms)
+
+    if vacuum is not None:
+        atoms.center(vacuum = vacuum/2., axis = 2)
+    else:
+        vacuum = 0.
+
+    if vacancy.height is not None:
+        vacancy_height = vacancy.height
+    elif vacancy.distance is not None:
+        vacancy_height = atoms.cell[2][2]-vacuum/2.+vacancy.distance
+    else:
+        raise TypeError('Specify vacancy height or distance attributes')
+
     if vacancy.units in ('A', 'angstrom'):
         units = ((1., 0.), (0., 1.))
     elif vacancy.units == 'slab cell':
         units = (atoms.cell[0][:2], atoms.cell[1][:2])
     elif vacancy.units == 'unit cell':
-        units = (atoms.cell[0][:2] / dimensions[0],
-                 atoms.cell[1][:2] / dimensions[1])
+        units = (atoms.cell[0][:2]/dimensions[0],
+                 atoms.cell[1][:2]/dimensions[1])
     else:
         raise NameError('Wrong vacancy.units keyword')
-
-    if vacancy.starting in ('from slab bottom', 'from slab top'):
-        if vacuum is None:
-            cell_height = atoms.cell[2][2]
-            atoms.center(vacuum = 0., axis = 2)
-            vacuum = cell_height - atoms.cell[2][2]
-        else:
-            atoms.center(vacuum = 0., axis = 2)
-
-    if vacancy.starting in ('from slab bottom', 'from cell bottom'):
-        vacacy_height = vacancy.distance
-    elif vacancy.starting in ('from slab top', 'from cell top'):
-        vacancy_height = atoms.cell[2][2] - vacancy.distance
 
     vacancy_pos = (np.dot(vacancy.position, [units[0][0], units[1][0]]),
                    np.dot(vacancy.position, [units[0][1], units[1][1]]),
@@ -1248,24 +1290,23 @@ def add_vacancy(atoms, vacancy, symmetry = None, dimensions = (1, 1),
                  a.position, rtol = 1e-2, atol = 1e-3) ]]
 
     if symmetry == 'planar':
-        vacancy_sym[2] = atoms.cell[2][2] - vacancy_height
+
+        vacancy_sym[2] = atoms.cell[2][2]-vacancy_height
+
         del atoms [[ a.index for a in atoms if np.allclose(vacancy_sym,
                      a.position, rtol = 1e-2, atol = 1e-3) ]]
 
     elif symmetry == 'inversion':
+
         vacancy_sym = [sum(atoms.cell[:2])[0] - vacancy_pos[0],
                        sum(atoms.cell[:2])[1] - vacancy_pos[1],
                        atoms.cell[2][2] - vacancy_height]
-        if abs(vacancy_pos[0] - vacancy_pos[1] * atoms.cell[1][0] / \
-           atoms.cell[1][1]) < epsi \
-        or abs(vacancy_pos[1] - vacancy_pos[0] * atoms.cell[0][1] / \
-           atoms.cell[0][0]) < epsi:
-            vacancy_sym[:2] = vacancy_pos[:2]
+
         del atoms [[ a.index for a in atoms if np.allclose(vacancy_sym,
                      a.position, rtol = 1e-2, atol = 1e-3) ]]
 
-    if vacuum:
-        atoms.center(vacuum = vacuum / 2., axis = 2)
+    if vacuum is not None:
+        atoms.center(vacuum = vacuum/2., axis = 2)
 
     return atoms
 
