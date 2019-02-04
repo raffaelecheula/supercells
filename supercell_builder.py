@@ -13,7 +13,7 @@ from ase.constraints import FixAtoms
 
 print('\n'
 "########################################################################\n"
-"# SUPERCELL BUILDER version 0.1.8                                       \n"
+"# SUPERCELL BUILDER version 0.1.10                                      \n"
 "# Distributed under the GPLv3 license                                   \n"
 "# Author: Raffaele Cheula                                               \n"
 "# raffaele.cheula@polimi.it                                             \n"
@@ -356,7 +356,7 @@ class Adsorbate:
                  distance = None,
                  units    = 'unit cell',
                  site     = None,
-                 variety  = 0,
+                 variant  = 0,
                  quadrant = 0):
 
         self.atoms    = atoms
@@ -365,7 +365,7 @@ class Adsorbate:
         self.distance = distance
         self.units    = units
         self.site     = site
-        self.variety  = variety
+        self.variant  = variant
         self.quadrant = quadrant
 
 ################################################################################
@@ -679,19 +679,19 @@ def automatic_vectors(bulk_type, miller_index):
             surface_vectors = [[+0.5, +0.0], [+0.0, +1.0]]
         elif miller_index == (1, 1, 1):
             surface_vectors = [[+0.5, +0.0], [+0.5, +0.5]]
-        elif miller_index == (2, 1, 0):
+        elif miller_index in ('210', (2, 1, 0)):
             surface_vectors = [[+0.5, +0.5], [+0.0, +1.0]]
         elif miller_index == (2, 1, 1):
             surface_vectors = [[+1.0, +1.0], [+0.0, +0.5]]
-        elif miller_index == (2, 2, 1):
+        elif miller_index in ('221', (2, 2, 1)):
             surface_vectors = [[+1.0, +0.0], [-0.5, +0.5]]
-        elif miller_index == (3, 1, 0):
+        elif miller_index in ('310', (3, 1, 0)):
             surface_vectors = [[+0.5, +0.0], [+0.0, +1.0]]
         elif miller_index == (3, 1, 1):
             surface_vectors = [[+0.5, +0.5], [+0.0, +0.5]]
-        elif miller_index == (3, 2, 0):
+        elif miller_index in ('320', (3, 2, 0)):
             surface_vectors = [[+0.5, +0.5], [+0.0, +1.0]]
-        elif miller_index == (3, 2, 1):
+        elif miller_index in ('321', (3, 2, 1)):
             surface_vectors = [[+0.5, +0.0], [-0.5, +1.0]]
         elif miller_index == (3, 3, 1):
             surface_vectors = [[+0.5, +0.0], [-0.5, +0.5]]
@@ -1158,7 +1158,7 @@ def standard_adsorbate(adsorbate, bulk_type = None, miller_index = None):
                    [[0.00, 1./2, +1.60], [0.38, 0.52, +0.80],
                     [0.65, 0.20, +0.60]],                      # sbr
                    [[0.35, 0.05, +0.30]],                      # hol
-                   [[0.58, 0.36, +0.35]],                      # fcc
+                   [[0.68, 0.36, +0.35]],                      # fcc
                    [[0.80, 0.20, +0.40]]]                      # hcp
     
         if miller_index in ('331', (3, 3, 1)):
@@ -1179,13 +1179,13 @@ def standard_adsorbate(adsorbate, bulk_type = None, miller_index = None):
                                 [0., 2.], [1., 2.], [2., 2.], [2., 1.],
                                 [2., 0.]])
 
-    adsorbate.position = pos[site[adsorbate.site]][adsorbate.variety][:2]
+    adsorbate.position = pos[site[adsorbate.site]][adsorbate.variant][:2]
     
     if adsorbate.quadrant is not None:
         adsorbate.position += quadrant_shifts[adsorbate.quadrant]
 
     if adsorbate.distance is None and adsorbate.height is None:
-        adsorbate.distance = pos[site[adsorbate.site]][adsorbate.variety][2]
+        adsorbate.distance = pos[site[adsorbate.site]][adsorbate.variant][2]
 
     adsorbate.units = 'unit cell'
 

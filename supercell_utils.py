@@ -3,8 +3,9 @@
 ################################################################################
 
 from __future__ import absolute_import, division, print_function
-import ast, re
+import ast, re, os
 import numpy as np
+import copy as cp
 from math import sin, pi, sqrt, atan, ceil
 from functools import reduce
 from fractions import gcd
@@ -14,6 +15,7 @@ from ase.io import read
 from ase.units import kB, create_units
 from ase.constraints import FixAtoms, FixCartesian
 from ase.geometry import get_duplicate_atoms
+from ase.calculators.espresso import Espresso
 from supercell_builder import (cut_surface, rotate_slab, convert_miller_index,
                                check_inversion_symmetry)
 
@@ -31,7 +33,7 @@ def get_atom_list(atoms):
                     del symbols[i]
                     break
 
-    return symbol
+    return symbols
 
 ################################################################################
 # GET ATOM DICT
@@ -79,15 +81,19 @@ def array_from_dict(symbol, array_dict):
 # READ VIB ENERGIES
 ################################################################################
 
-def read_vib_energies(filename = 'log.txt'):
+def read_vib_energies(filename = 'log.txt', imaginary = False):
 
     vib_energies = []
     f = open(filename, 'rU')
     
     lines = f.readlines()
-    for i in range(3, len(lines) - 2):
-        try: vib_energies.append(float(lines[i].split()[1]) * 1e-3)
-        except: pass
+    for i in range(3, len(lines)-2):
+        string = lines[i].split()[1]
+        if string[-1] == 'i':
+            if imaginary is True:
+                vib_energies.append(complex(0., float(string[:-1]) * 1e-3))
+        else:
+            vib_energies.append(complex(float(string) * 1e-3))
 
     return vib_energies
 
@@ -177,6 +183,8 @@ def write_neb_inp(input_data_neb, images, calc, filename = 'neb.inp'):
 
         for line in lines[n:]:
             f.write(line)
+
+    os.remove('espresso.pwi')
 
     f.write('END_POSITIONS\n')
     f.write('END_ENGINE_INPUT\n')
@@ -334,29 +342,30 @@ def read_qe_out(filename):
             n_nrg = n
         elif 'Final energy' in line:
             n_fin = n
-        elif 'Begin final coordinates' in line:
-            n_pos = n
+        elif 'ATOMIC_POSITIONS' in line:
+            n_pos = n+1
 
     for i in range(3):
         line = lines[n_cell+1+i]
         cell[i] = [ float(c)*celldm for c in line.split()[3:6] ]
 
-    if str(lines[n_pos+3].split()[0]) == 'CELL_PARAMETERS':
+    if str(lines[n_pos].split()[0]) == 'CELL_PARAMETERS':
         for i in range(3):
-            line = lines[n_pos+4+i]
+            line = lines[n_pos+1+i]
             cell[i] = [ float(c)*celldm for c in line.split()[3:6] ]
         n_pos += 6
 
     atoms.set_cell(cell)
 
-    energy = float(lines[n_fin].split()[3]) * units['Ry']
+    try: energy = float(lines[n_fin].split()[3]) * units['Ry']
+    except: energy = None
 
     index = 0
     indices = []
     constraints = []
     translate_constraints = {0: True, 1: False}
-    for line in lines[n_pos+3:]:
-        if line.split()[0] == 'End':
+    for line in lines[n_pos:]:
+        if len(line.split()) == 0 or line.split()[0] == 'End':
             break
         symbol = line.split()[0]
         positions = [[ float(i) for i in line.split()[1:4] ]]
@@ -373,14 +382,27 @@ def read_qe_out(filename):
             constraints.append(FixCartesian([index], fix))
         index += 1
 
-    atoms_ase = read(filename)
-    atoms_ase.set_chemical_symbols(atoms.get_chemical_symbols())
-    atoms_ase.set_positions(atoms.get_positions())
-
     constraints.append(FixAtoms(indices = indices))
-    atoms_ase.set_constraint(constraints)
-    
-    return atoms_ase
+    atoms.set_constraint(constraints)
+
+    results = {'energy' : energy}
+
+    calc = Espresso()
+
+    calc.results = results
+
+    atoms.set_calculator(calc)
+
+    return atoms
+
+    #atoms_ase = read(filename)
+    #atoms_ase.set_chemical_symbols(atoms.get_chemical_symbols())
+    #atoms_ase.set_positions(atoms.get_positions())
+    #
+    #constraints.append(FixAtoms(indices = indices))
+    #atoms_ase.set_constraint(constraints)
+    #
+    #return atoms_ase
 
 ################################################################################
 # READ QUANTUM ESPRESSO INP
@@ -462,8 +484,8 @@ def update_pseudos(pseudos, filename):
 
 def atoms_fixed(atoms):
 
-    fixed = np.concatenate([ a.__dict__['index'] for a in atoms.constraints if \
-                             a.__class__.__name__ == 'FixAtoms' ])
+    fixed = np.concatenate([a.__dict__['index'] for a in atoms.constraints if \
+                            a.__class__.__name__ == 'FixAtoms'])
 
     return fixed
 
@@ -474,7 +496,7 @@ def atoms_fixed(atoms):
 def atoms_not_fixed(atoms):
 
     fixed = atoms_fixed(atoms)
-    not_fixed = [ i for i in range(len(atoms)) if i not in fixed ]
+    not_fixed = [i for i in range(len(atoms)) if i not in fixed]
     
     return not_fixed
 
@@ -621,9 +643,9 @@ def adapt_slabs_dimensions(slab_a, slab_b, area_max = 100., stretch_max = 0.05,
         print('NO MATCH BETWEEN THE SLABS IS FOUND!')
         return slab_a, slab_b
 
-    slab_a = cut_surface(slab_a, vect_a_opt[0], vect_a_opt[1])
+    slab_a = cut_surface(slab_a, surface_vectors = vect_a_opt)
     slab_a = rotate_slab(slab_a, 'automatic')
-    slab_b = cut_surface(slab_b, vect_b_opt[0], vect_b_opt[1])
+    slab_b = cut_surface(slab_b, surface_vectors = vect_b_opt)
     slab_b = rotate_slab(slab_b, 'automatic')
     
     if invert_opt is True:
@@ -793,6 +815,38 @@ def get_moments_of_inertia_xyz(atoms, center = None):
         I[2] += m * (x**2 + y**2)
 
     return I
+
+################################################################################
+# REORDER NEB IMAGES
+################################################################################
+
+def reorder_neb_images(first, last):
+
+    coupled = cp.deepcopy(last)
+    spared = [ a for a in last ]
+    
+    del coupled [ range(len(coupled)) ]
+    
+    for a in first:
+        distances = [10.]*len(last)
+        for b in [ b for b in last if b.symbol == a.symbol ]:
+            distances[b.index] = np.linalg.norm(b.position-a.position)
+        if np.min(distances) > 0.5:
+            first += first.pop(i = a.index)
+    
+    for a in first:
+        distances = [10.]*len(last)
+        for b in [ b for b in last if b.symbol == a.symbol ]:
+            distances[b.index] = np.linalg.norm(b.position-a.position)
+        if np.min(distances) < 0.5:
+            index = np.argmin(distances)
+            coupled += last[index]
+            spared[index] = None
+    
+    spared = Atoms([a for a in spared if a is not None])
+    last = coupled + spared
+
+    return first, last
 
 ################################################################################
 # END
