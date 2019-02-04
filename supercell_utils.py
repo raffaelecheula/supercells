@@ -440,7 +440,7 @@ def read_qe_inp(filename):
             if '.true.' in argument:
                 argument = True
             elif '.false.' in argument:
-                argumnt = False
+                argument = False
             else:
                 argument = ast.literal_eval(argument)
             if type(argument) is tuple: argument = argument[0]
