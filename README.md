@@ -54,7 +54,7 @@
 
 ## **Adsorbate:**
 
-**`class Adsorbate(atoms, position, distance, units, site, variety, quadrant)`**
+**`class Adsorbate(atoms, position, distance, units, site, variant, quadrant)`**
 
 ### Parameters:
 
@@ -64,7 +64,7 @@
   * **`distance`** : `None` - `distance` _# Distance from the slab top on the z direction._
   * **`units   `** : `'angstrom'` - `'slab cell'` - `'unit cell'` _# Units for defining the position vectors._
   * **`site    `** : `None` - `'top'` - `'brg'` - `'sbr'` - `'lbr'` - `'hol'` - `'lho'` - `'fcc'` - `'hcp'` _# Name of the standard site of the adsorbate._ 
-  * **`variety  `** : `None` - `number` _# On high Miller index surfaces, discriminates different adsorption sites with the same name._
+  * **`variant  `** : `None` - `number` _# On high Miller index surfaces, discriminates different adsorption sites with the same name._
   * **`quadrant`** : `None` - `quadrant` _# If not None, translates the Adsorbate to diffenent neighbors unit cells._
 
 ## **Vacancy:**
