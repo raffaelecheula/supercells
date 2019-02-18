@@ -381,7 +381,7 @@ def read_qe_out(filename):
             positions = [[ float(i) for i in line.split()[1:4] ]]
             fix = [ translate_constraints[int(i)] for i in line.split()[4:] ]
 
-        if atomic_pos_units in 'crystal':
+        if atomic_pos_units is 'crystal':
             atoms += Atoms(symbol, scaled_positions = positions)
         else:
             atoms += Atoms(symbol, positions = positions)
