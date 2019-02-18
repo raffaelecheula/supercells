@@ -330,30 +330,35 @@ def read_qe_out(filename):
     fileobj = open(filename, 'rU')
     lines = fileobj.readlines()
 
-    atomic_positions = 'angstrom'
     for n, line in enumerate(lines):
-        if 'ATOMIC_POSITIONS (crystal)' in line:
-            atomic_positions = 'crystal'
+        if 'positions (alat units)' in line:
+            atomic_pos_units = 'alat'
+            n_pos = n+1
+        elif 'ATOMIC_POSITIONS' in line and 'crystal' in line:
+            atomic_pos_units = 'crystal'
+            n_pos = n+1
+        elif 'ATOMIC_POSITIONS' in line and 'angstrom' in line:
+            atomic_pos_units = 'angstrom'
+            n_pos = n+1
         elif 'celldm(1)' in line:
             celldm = float(line.split()[1]) * units['Bohr']
         elif 'crystal axes: (cart. coord. in units of alat)' in line:
-            n_cell = n
+            cell_units = 'alat'
+            n_cell = n+1
+        elif 'CELL_PARAMETERS' in line and 'angstrom' in line:
+            cell_units = 'angstrom'
+            n_cell = n+1
         elif '!' in line:
             n_nrg = n
         elif 'Final energy' in line:
             n_fin = n
-        elif 'ATOMIC_POSITIONS' in line:
-            n_pos = n+1
 
     for i in range(3):
-        line = lines[n_cell+1+i]
-        cell[i] = [ float(c)*celldm for c in line.split()[3:6] ]
-
-    if str(lines[n_pos].split()[0]) == 'CELL_PARAMETERS':
-        for i in range(3):
-            line = lines[n_pos+1+i]
-            cell[i] = [ float(c)*celldm for c in line.split()[3:6] ]
-        n_pos += 6
+        line = lines[n_cell+i]
+        if cell_units == 'alat':
+            cell[i] = [float(c)*celldm for c in line.split()[3:6]]
+        elif cell_units == 'angstrom':
+            cell[i] = [float(c) for c in line.split()[:3]]
 
     atoms.set_cell(cell)
 
@@ -367,11 +372,16 @@ def read_qe_out(filename):
     for line in lines[n_pos:]:
         if len(line.split()) == 0 or line.split()[0] == 'End':
             break
-        symbol = line.split()[0]
-        positions = [[ float(i) for i in line.split()[1:4] ]]
-        fix = [ translate_constraints[int(i)] for i in line.split()[4:] ]
+        if atomic_pos_units == 'alat':
+            symbol = line.split()[1]
+            positions = [[ float(i)*celldm for i in line.split()[6:9] ]]
+            fix = [False, False, False]
+        else:
+            symbol = line.split()[0]
+            positions = [[ float(i) for i in line.split()[1:4] ]]
+            fix = [ translate_constraints[int(i)] for i in line.split()[4:] ]
 
-        if atomic_positions is 'crystal':
+        if atomic_pos_units in 'crystal':
             atoms += Atoms(symbol, scaled_positions = positions)
         else:
             atoms += Atoms(symbol, positions = positions)
@@ -467,6 +477,35 @@ def read_qe_inp(filename):
     except: pass
 
     return input_data, pseudos, kpts, koffset
+
+################################################################################
+# READ QUANTUM ESPRESSO INP
+################################################################################
+
+class ReadQeInp:
+
+    def __init__(self, filename):
+
+        self.filename = filename
+
+    def get_data_pseudos_kpts(self):
+
+        input_data, pseudos, kpts, koffset = read_qe_inp(self.filename)
+
+        self.input_data = input_data
+        self.pseudos    = pseudos
+        self.kpts       = kpts
+        self.koffset    = koffset
+
+        return input_data, pseudos, kpts, koffset
+
+    def get_atoms(self):
+
+        atoms = read_qe_out(self.filename)
+
+        self.atoms = atoms
+
+        return atoms
 
 ################################################################################
 # UPDATE PSEUDOPOTENTIALS

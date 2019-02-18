@@ -1,4 +1,4 @@
-# supercell_builder (version 0.1.10)
+# supercell_builder (version 0.1.11)
 
 ## **Bulk:**
 
@@ -54,17 +54,16 @@
 
 ## **Adsorbate:**
 
-**`class Adsorbate(atoms, position, distance, units, site, variant, quadrant)`**
+**`class Adsorbate(atoms, position, distance, units, site, number, quadrant)`**
 
 ### Parameters:
 
   * **`atoms   `** : `atoms` _# An ase.Atoms class instance._
   * **`position`** : `None` - `(x, y)` _# Vector position of the adsorbate with units defined in the units attribute._
-  * **`height  `** : `None` - `distance` _# Height of the adsorbate._
-  * **`distance`** : `None` - `distance` _# Distance from the slab top on the z direction._
+  * **`distance`** : `None` - `distance` _# Distance from the slab top atom._
   * **`units   `** : `'angstrom'` - `'slab cell'` - `'unit cell'` _# Units for defining the position vectors._
   * **`site    `** : `None` - `'top'` - `'brg'` - `'sbr'` - `'lbr'` - `'hol'` - `'lho'` - `'fcc'` - `'hcp'` _# Name of the standard site of the adsorbate._ 
-  * **`variant  `** : `None` - `number` _# On high Miller index surfaces, discriminates different adsorption sites with the same name._
+  * **`number  `** : `None` - `number` _# On high Miller index surfaces, discriminates different adsorption sites with the same name._
   * **`quadrant`** : `None` - `quadrant` _# If not None, translates the Adsorbate to diffenent neighbors unit cells._
 
 ## **Vacancy:**
@@ -74,8 +73,8 @@
 ### Parameters:
 
   * **`position`** : `(x, y)` _# Vector position of the vacancy with units defined in the units attribute._
-  * **`height  `** : `None` - `distance` _# Height of the vacancy._
-  * **`distance`** : `None` - `distance` _# Distance from the slab top on the z direction._
+  * **`distance`** : `None` - `distance` _# Distance from the slab top atom._
+  * **`starting`** : `'from slab top'` - `'from slab bottom'` - `'from cell top'` - `'from cell top'` _# Starting z for distance definition._
   * **`units   `** : `'angstrom'` - `'slab cell'` - `'unit cell'` _# Units for defining the position vectors._
 
 ## Authors:
