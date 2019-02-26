@@ -674,40 +674,41 @@ def automatic_vectors(bulk_type, miller_index):
 
     if bulk_type == 'fcc':
         if miller_index == (1, 0, 0):
-            surface_vectors = [[+0.5, +0.5], [-0.5, +0.5]]
+            surface_vectors = [[+0.50, +0.50], [-0.50, +0.50]]
         elif miller_index == (1, 1, 0):
-            surface_vectors = [[+0.5, +0.0], [+0.0, +1.0]]
+            surface_vectors = [[+0.50, +0.00], [+0.00, +1.00]]
         elif miller_index == (1, 1, 1):
-            surface_vectors = [[+0.5, +0.0], [+0.5, +0.5]]
-        elif miller_index in ('210', (2, 1, 0)):
-            surface_vectors = [[+0.5, +0.5], [+0.0, +1.0]]
+            surface_vectors = [[+0.50, +0.00], [+0.50, +0.50]]
+        elif miller_index == (2, 1, 0):
+            surface_vectors = [[+0.50, +0.50], [+0.00, +1.00]]
         elif miller_index == (2, 1, 1):
-            surface_vectors = [[+1.0, +1.0], [+0.0, +0.5]]
-        elif miller_index in ('221', (2, 2, 1)):
-            surface_vectors = [[+1.0, +0.0], [-0.5, +0.5]]
-        elif miller_index in ('310', (3, 1, 0)):
-            surface_vectors = [[+0.5, +0.0], [+0.0, +1.0]]
+            surface_vectors = [[+1.00, +1.00], [+0.00, +0.50]]
+        elif miller_index == (2, 2, 1):
+            surface_vectors = [[+1.00, +0.00], [-0.50, +0.50]]
+        elif miller_index == (3, 1, 0):
+            surface_vectors = [[+0.50, +0.00], [+0.00, +1.00]]
         elif miller_index == (3, 1, 1):
-            surface_vectors = [[+0.5, +0.5], [+0.0, +0.5]]
-        elif miller_index in ('320', (3, 2, 0)):
-            surface_vectors = [[+0.5, +0.5], [+0.0, +1.0]]
-        elif miller_index in ('321', (3, 2, 1)):
-            surface_vectors = [[+0.5, +0.0], [-0.5, +1.0]]
+            surface_vectors = [[+0.50, -0.50], [+0.00, +0.50]]
+            #surface_vectors = [[+1.00, +0.00], [+0.00, +1.00]]
+        elif miller_index == (3, 2, 0):
+            surface_vectors = [[+0.50, +0.50], [+0.00, +1.00]]
+        elif miller_index == (3, 2, 1):
+            surface_vectors = [[+0.50, +0.00], [-0.50, +1.00]]
         elif miller_index == (3, 3, 1):
-            surface_vectors = [[+0.5, +0.0], [-0.5, +0.5]]
+            surface_vectors = [[+0.50, +0.00], [-0.50, +0.50]]
         else:
-            surface_vectors = [[+1.0, +0.0], [+0.0, +1.0]]
+            surface_vectors = [[+1.00, +0.00], [+0.00, +1.00]]
 
     elif bulk_type == 'corundum':
         if miller_index == (0, 0, 1):
-            surface_vectors = [[+1.0, +0.0], [+0.0, +1.0]]
+            surface_vectors = [[+1.00, +0.00], [+0.00, +1.00]]
         if miller_index == (1, -1, 2):
-            surface_vectors = [[+1.0, +0.0], [-1/3, +1/3]]
+            surface_vectors = [[+1.00, +0.00], [-1./3, +1./3]]
         else:
-            surface_vectors = [[+1.0, +0.0], [+0.0, +1.0]]
+            surface_vectors = [[+1.00, +0.00], [+0.00, +1.00]]
 
     else:
-        surface_vectors = [[+1.0, +0.0], [+0.0, +1.0]] # ( TODO: complete )
+        surface_vectors = [[+1.00, +0.00], [+0.00, +1.00]] # ( TODO: complete )
 
     return surface_vectors
 
@@ -1177,7 +1178,8 @@ def standard_adsorbate(adsorbate, bulk_type = None, miller_index = None):
 
     quadrant_shifts = np.array([[0., 0.], [0., 1.], [1., 1.], [1., 0.],
                                 [0., 2.], [1., 2.], [2., 2.], [2., 1.],
-                                [2., 0.]])
+                                [2., 0.], [0., 3.], [1., 3.], [2., 3.],
+                                [3., 3.], [3., 2.], [3., 1.], [3., 0.]])
 
     adsorbate.position = pos[site[adsorbate.site]][adsorbate.variant][:2]
     
