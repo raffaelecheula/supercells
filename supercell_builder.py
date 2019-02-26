@@ -98,21 +98,21 @@ class Slab:
         layers = int(layers)
         
         if surface_vectors == 'automatic':
-            if input_slab:
+            if input_slab is not None:
                 surface_vectors = None
             else:
                 surface_vectors = automatic_vectors(bulk.bulk_type,
                                                     miller_index)
 
         repetitions = (1, 1)
-        if surface_vectors:
+        if surface_vectors is not None:
             surface_vectors = [np.dot(surface_vectors[0], dimensions[0]),
                                np.dot(surface_vectors[1], dimensions[1])]
         else:
             repetitions = (int(dimensions[0]), int(dimensions[1]))
 
-        if input_slab:
-            atoms = import_slab_structure(input_slab, dimensions)
+        if input_slab is not None:
+            atoms = import_slab_structure(input_slab, repetitions)
         else:
             atoms = build_slab_structure(bulk.atoms,
                                          bulk.bulk_type,
@@ -122,16 +122,16 @@ class Slab:
                                          repetitions,
                                          layers)
 
-        if surface_vectors:
+        if surface_vectors is not None:
             atoms = cut_surface(atoms, surface_vectors)
 
-        if rotation_angle:
+        if rotation_angle is not None:
             atoms = rotate_slab(atoms, rotation_angle)
 
-        if cut_top:
+        if cut_top is not None:
             atoms = cut_top_slab(atoms, cut_top, vacuum = 0.)
 
-        if cut_bottom:
+        if cut_bottom is not None:
             atoms = cut_bottom_slab(atoms, cut_bottom, vacuum = 0.)
 
         if symmetry == 'asymmetric':
@@ -143,7 +143,7 @@ class Slab:
         else:
             raise NameError('Wrong symmetry keyword')
 
-        if layers_fixed:
+        if layers_fixed is not None:
             atoms = fix_atoms(atoms, layers_fixed, layers, symmetry)
 
         atoms.center(vacuum = 0., axis = 2)
@@ -184,7 +184,7 @@ class Slab:
         if sort_atoms is True:
             atoms = sort_slab(atoms)
 
-        if scale_kpts:
+        if scale_kpts is not None:
             kpts = calculate_kpts(atoms,
                                   cell       = bulk.atoms.cell,
                                   kpts       = bulk.kpts_bulk,
