@@ -637,6 +637,23 @@ def build_slab_structure(atoms, bulk_type, elements, lattice_constants,
                             surface_vectors = surface_vectors)
         atoms *= (dimensions[0], dimensions[1], 1)
 
+    elif miller_index == '321' and bulk_type == 'fcc':
+        layers = layers*2+1
+        miller_index = convert_miller_index(miller_index)
+        atoms = build_slab_structure(atoms             = atoms,
+                                     bulk_type         = bulk_type,
+                                     elements          = elements,
+                                     lattice_constants = lattice_constants,
+                                     miller_index      = miller_index,
+                                     dimensions        = (1, 1),
+                                     layers            = layers)
+
+        surface_vectors = automatic_vectors(bulk_type    = bulk_type,
+                                            miller_index = miller_index)
+        atoms = cut_surface(atoms           = atoms, 
+                            surface_vectors = surface_vectors)
+        atoms *= (dimensions[0], dimensions[1], 1)
+
     elif miller_index == '331' and bulk_type == 'fcc':
         layers *= 3
         miller_index = convert_miller_index(miller_index)
