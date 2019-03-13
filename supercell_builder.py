@@ -63,11 +63,11 @@ class Bulk:
 
     def update(self):
 
-        bulk = Bulk(bulk_type         = self.bulk_type,
-                    input_bulk        = self.input_bulk,
-                    elements          = self.elements,
+        bulk = Bulk(bulk_type         = self.bulk_type        ,
+                    input_bulk        = self.input_bulk       ,
+                    elements          = self.elements         ,
                     lattice_constants = self.lattice_constants,
-                    kpts_bulk         = self.kpts_bulk)
+                    kpts_bulk         = self.kpts_bulk        )
 
         return bulk
 
@@ -78,22 +78,22 @@ class Bulk:
 class Slab:
 
     def __init__(self,
-                 bulk            = None,
-                 input_slab      = None,
-                 miller_index    = None,
-                 surface_vectors = None,
+                 bulk            = None  ,
+                 input_slab      = None  ,
+                 miller_index    = None  ,
+                 surface_vectors = None  ,
                  dimensions      = (1, 1),
-                 layers          = 1,
-                 layers_fixed    = None,
-                 symmetry        = None,
-                 rotation_angle  = None,
-                 cut_top         = None,
-                 cut_bottom      = None,
-                 adsorbates      = [],
-                 vacancies       = [],
-                 scale_kpts      = None,
-                 vacuum          = None,
-                 sort_atoms      = False):
+                 layers          = 1     ,
+                 layers_fixed    = None  ,
+                 symmetry        = None  ,
+                 rotation_angle  = None  ,
+                 cut_top         = None  ,
+                 cut_bottom      = None  ,
+                 adsorbates      = []    ,
+                 vacancies       = []    ,
+                 scale_kpts      = None  ,
+                 vacuum          = None  ,
+                 sort_atoms      = False ):
 
         layers = int(layers)
         
@@ -102,7 +102,7 @@ class Slab:
                 surface_vectors = None
             else:
                 surface_vectors = automatic_vectors(bulk.bulk_type,
-                                                    miller_index)
+                                                    miller_index  )
 
         repetitions = (1, 1)
         if surface_vectors is not None:
@@ -114,13 +114,13 @@ class Slab:
         if input_slab is not None:
             atoms = import_slab_structure(input_slab, repetitions)
         else:
-            atoms = build_slab_structure(bulk.atoms,
-                                         bulk.bulk_type,
-                                         bulk.elements,
+            atoms = build_slab_structure(bulk.atoms            ,
+                                         bulk.bulk_type        ,
+                                         bulk.elements         ,
                                          bulk.lattice_constants,
-                                         miller_index,
-                                         repetitions,
-                                         layers)
+                                         miller_index          ,
+                                         repetitions           ,
+                                         layers                )
 
         if surface_vectors is not None:
             atoms = cut_surface(atoms, surface_vectors)
@@ -149,17 +149,19 @@ class Slab:
         atoms.center(vacuum = 0., axis = 2)
         slab_height = atoms.cell[2][2]
 
+        atoms = cut_surface(atoms)
+
         if vacancies:
             if vacuum is not None:
                 atoms.center(vacuum = vacuum/2., axis = 2)
             if type(vacancies) is not list:
                 vacancies = [vacancies]
             for vacancy in vacancies:
-                atoms = add_vacancy(atoms      = atoms,
-                                    vacancy    = vacancy,
-                                    symmetry   = symmetry,
+                atoms = add_vacancy(atoms      = atoms     ,
+                                    vacancy    = vacancy   ,
+                                    symmetry   = symmetry  ,
                                     dimensions = dimensions,
-                                    vacuum     = vacuum)
+                                    vacuum     = vacuum    )
 
         if adsorbates:
             if vacuum is not None:
@@ -167,28 +169,26 @@ class Slab:
             if type(adsorbates) is not list:
                 adsorbates = [adsorbates]
             for adsorbate in adsorbates:
-                atoms = add_adsorbate(atoms        = atoms,
-                                      adsorbate    = adsorbate,
-                                      symmetry     = symmetry,
-                                      dimensions   = dimensions,
+                atoms = add_adsorbate(atoms        = atoms         ,
+                                      adsorbate    = adsorbate     ,
+                                      symmetry     = symmetry      ,
+                                      dimensions   = dimensions    ,
                                       bulk_type    = bulk.bulk_type,
-                                      miller_index = miller_index,
-                                      slab_height  = slab_height,
-                                      vacuum       = vacuum)
+                                      miller_index = miller_index  ,
+                                      slab_height  = slab_height   ,
+                                      vacuum       = vacuum        )
 
         if vacuum is not None:
             atoms.center(vacuum = vacuum/2., axis = 2)
 
-        atoms = cut_surface(atoms)
-        
         if sort_atoms is True:
             atoms = sort_slab(atoms)
 
         if scale_kpts is not None:
             kpts = calculate_kpts(atoms,
                                   cell       = bulk.atoms.cell,
-                                  kpts       = bulk.kpts_bulk,
-                                  scale_kpts = scale_kpts)
+                                  kpts       = bulk.kpts_bulk ,
+                                  scale_kpts = scale_kpts     )
         else:
             kpts = bulk.kpts_bulk
 
@@ -357,7 +357,9 @@ class Adsorbate:
                  units    = 'unit cell',
                  site     = None,
                  variant  = 0,
-                 quadrant = 0):
+                 quadrant = 0,
+                 rot_vect = None,
+                 angle    = 0.):
 
         self.atoms    = atoms
         self.position = position
@@ -367,6 +369,8 @@ class Adsorbate:
         self.site     = site
         self.variant  = variant
         self.quadrant = quadrant
+        self.rot_vect = rot_vect
+        self.angle    = angle
 
 ################################################################################
 # VACANCY CLASS
@@ -609,11 +613,33 @@ def build_slab_structure(atoms, bulk_type, elements, lattice_constants,
                                      miller_index      = miller_index,
                                      dimensions        = (1, 1),
                                      layers            = layers)
+        if layers % 3:
+            atoms = cut_bottom_slab(atoms      = atoms,
+                                    cut_bottom = 1e-3,
+                                    starting   = 'from slab bottom',
+                                    verbosity  = 'low')
+        surface_vectors = automatic_vectors(bulk_type    = bulk_type,
+                                            miller_index = miller_index)
+        atoms = cut_surface(atoms           = atoms, 
+                            surface_vectors = surface_vectors)
+        atoms *= (dimensions[0], dimensions[1], 1)
+
+    elif miller_index == '210' and bulk_type == 'fcc':
+        layers = int(ceil(layers*3/2))
+        miller_index = convert_miller_index(miller_index)
+        atoms = build_slab_structure(atoms             = atoms,
+                                     bulk_type         = bulk_type,
+                                     elements          = elements,
+                                     lattice_constants = lattice_constants,
+                                     miller_index      = miller_index,
+                                     dimensions        = (1, 1),
+                                     layers            = layers)
         if layers % 2:
             atoms = cut_bottom_slab(atoms      = atoms,
                                     cut_bottom = 1e-3,
                                     starting   = 'from slab bottom',
                                     verbosity  = 'low')
+
         surface_vectors = automatic_vectors(bulk_type    = bulk_type,
                                             miller_index = miller_index)
         atoms = cut_surface(atoms           = atoms, 
@@ -699,7 +725,8 @@ def automatic_vectors(bulk_type, miller_index):
         elif miller_index == (2, 1, 0):
             surface_vectors = [[+0.50, +0.50], [+0.00, +1.00]]
         elif miller_index == (2, 1, 1):
-            surface_vectors = [[+1.00, +1.00], [+0.00, +0.50]]
+            surface_vectors = [[+1.00, -1.00], [+0.00, +0.50]]
+            #surface_vectors = [[+1.00, +1.00], [+0.00, +0.50]]
         elif miller_index == (2, 2, 1):
             surface_vectors = [[+1.00, +0.00], [-0.50, +0.50]]
         elif miller_index == (3, 1, 0):
@@ -968,12 +995,12 @@ def boundary_atoms(atoms, base_boundary = False, outer_boundary = False,
 # INVERSION SYMMETRY
 ################################################################################
 
-def inversion_symmetry(atoms, vacuum = None, big_cell_inversion = False):
+def inversion_symmetry(atoms, vacuum = None, big_cell_inversion = True):
 
     if vacuum is None:
         cell_height = atoms.cell[2][2]
         atoms.center(vacuum = 0., axis = 2)
-        vacuum = cell_height - atoms.cell[2][2]
+        vacuum = cell_height-atoms.cell[2][2]
     else:
         atoms.center(vacuum = 0., axis = 2)
 
@@ -987,20 +1014,30 @@ def inversion_symmetry(atoms, vacuum = None, big_cell_inversion = False):
     print('inversion symmetry =', sym)
 
     if sym is not True:
-        atoms_inv = create_inversion_symmetry(atoms)
-        sym = check_inversion_symmetry(atoms_inv, print_check = True)
-        print('inversion symmetry =', sym)
 
-        if sym is not True and big_cell_inversion is True:
+        if big_cell_inversion is False:
+
+            atoms_inv = create_inversion_symmetry(atoms)
+            sym = check_inversion_symmetry(atoms_inv, print_check = True)
+            print('inversion symmetry =', sym)
+
+        if sym is not True:
+
             print('\nBIG CELL INVERSION SYMMETRY')
             origin = (sum(atoms.cell[:2])[0]/2.,
                       sum(atoms.cell[:2])[1]/2.)
             atoms *= (2, 2, 1)
-            atoms = create_inversion_symmetry(atoms)
-            atoms = cut_surface(atoms,
-                                vector_a = [0.5, 0.],
-                                vector_b = [0., 0.5],
-                                origin = origin)
+            try:
+                atoms = create_inversion_symmetry(atoms, cut_slab = False)
+                sym = check_inversion_symmetry(atoms)
+                assert sym is True
+            except:
+                atoms = create_inversion_symmetry(atoms, cut_slab = True)
+                sym = check_inversion_symmetry(atoms)
+            
+            atoms = cut_surface(atoms           = atoms,
+                                surface_vectors = [[0.5, 0.], [0., 0.5]],
+                                origin          = origin)
             sym = check_inversion_symmetry(atoms)
             print('inversion symmetry =', sym)
             if sym is not True:
@@ -1018,34 +1055,45 @@ def inversion_symmetry(atoms, vacuum = None, big_cell_inversion = False):
 ################################################################################
 
 def create_inversion_symmetry(atoms, base_boundary = False, 
-                              outer_boundary = False,
+                              outer_boundary       = False,
+                              cut_slab             = False,
                               epsi = 1e-5):
 
     print('\nCREATING INVERSION SYMMETRY')
     atoms_plus = boundary_atoms(atoms, base_boundary = False,
                                 outer_boundary = False)
 
-    try:
-        from supercell_cython import find_inversion_centre_cython
-        centre = find_inversion_centre_cython(atoms_plus.get_positions(),
-                                              atoms_plus.get_chemical_symbols())
-    except ImportError:
-        centre = find_inversion_centre(atoms_plus)
+    #try:
+    #
+    #    from supercell_cython import find_inversion_centre_cython
+    #    
+    #    cut_slab = True
+    #    
+    #    centre = find_inversion_centre_cython(atoms_plus.get_positions(),
+    #                                          atoms_plus.get_chemical_symbols())
+    #
+    #except ImportError:
+    #
+    #    centre = find_inversion_centre(atoms_plus, cut_slab = cut_slab)
 
-    origin = centre - sum(atoms.cell)/2.
+    centre = find_inversion_centre(atoms_plus, cut_slab = cut_slab)
 
-    if origin[2] < 0.:
-        print('deleted top atoms:', len([ a.index for a in atoms \
-            if a.position[2] > 2.*centre[2]+epsi ]))
-        del atoms [[ a.index for a in atoms \
-            if a.position[2] > 2.*centre[2]+epsi ]]
-    elif origin[2] > 0.:
-        print('deleted bottom atoms:', len([ a.index for a in atoms \
-            if a.position[2] < 2.*centre[2]-atoms.cell[2][2]-epsi ]))
-        del atoms [[ a.index for a in atoms \
-            if a.position[2] < 2.*centre[2]-atoms.cell[2][2]-epsi ]]
+    origin = centre-sum(atoms.cell)/2.
 
-    atoms = cut_surface(atoms, origin = [origin[0], origin[1]])
+    if cut_slab is True:
+
+        if origin[2] < 0.:
+            print('deleted top atoms:', len([ a.index for a in atoms \
+                if a.position[2] > 2.*centre[2]+epsi ]))
+            del atoms [[ a.index for a in atoms \
+                if a.position[2] > 2.*centre[2]+epsi ]]
+        elif origin[2] > 0.:
+            print('deleted bottom atoms:', len([ a.index for a in atoms \
+                if a.position[2] < 2.*centre[2]-atoms.cell[2][2]-epsi ]))
+            del atoms [[ a.index for a in atoms \
+                if a.position[2] < 2.*centre[2]-atoms.cell[2][2]-epsi ]]
+
+    atoms = cut_surface(atoms, origin = origin[:2])
 
     return atoms
 
@@ -1053,12 +1101,12 @@ def create_inversion_symmetry(atoms, base_boundary = False,
 # FIND INVERSION CENTRE
 ################################################################################
 
-def find_inversion_centre(atoms_plus):
+def find_inversion_centre(atoms, cut_slab = False):
 
     print('USING PYTHON (CYTHON ALSO AVAILABLE)\n')
 
     c_matrix = np.array([ ((a.position + b.position) / 2.) for a in \
-               atoms_plus for b in atoms_plus if b.symbol == a.symbol and \
+               atoms for b in atoms if b.symbol == a.symbol and \
                b.index >= a.index ])
 
     print('number of centres =', len(c_matrix))
@@ -1068,9 +1116,24 @@ def find_inversion_centre(atoms_plus):
               np.around(c_matrix[j], decimals = 3)) ]) for i in \
               range(len(c_matrix)) ])
 
-    print('number of occurrences =', max(indices))
+    n_max = np.max(indices)
 
-    centre = c_matrix[np.argmax(indices)]
+    print('number of occurrences maximum =', n_max)
+
+    middles = [i for i in indices if 
+               abs(c_matrix[i][2]-atoms.cell[2][2]/2.) < 1e-2]
+
+    m_max = np.max(middles)
+
+    print('number of occurrences in middle =', m_max)
+
+    if cut_slab is False:
+
+        centre = c_matrix[middles[m_max]]
+
+    else:
+
+        centre = c_matrix[indices[n_max]]
 
     return centre
 
@@ -1223,13 +1286,6 @@ def add_adsorbate(atoms, adsorbate, symmetry = None, dimensions = (1, 1),
     if vacuum is None:
         vacuum = 0.
 
-    if adsorbate.height is not None:
-        adsorbate_height = adsorbate.height
-    elif adsorbate.distance is not None:
-        adsorbate_height = atoms.cell[2][2]-vacuum/2.+adsorbate.distance
-    else:
-        raise TypeError('Specify adsorbate height or distance attributes')
-
     if adsorbate.site is not None:
         adsorbate = standard_adsorbate(adsorbate, bulk_type, miller_index)
 
@@ -1243,11 +1299,21 @@ def add_adsorbate(atoms, adsorbate, symmetry = None, dimensions = (1, 1),
     else:
         raise NameError('Wrong adsorbate.units keyword')
 
+    if adsorbate.height is not None:
+        adsorbate.distance = adsorbate.height-atoms.cell[2][2]+vacuum/2.
+    elif adsorbate.distance is None:
+        raise TypeError('Specify adsorbate height or distance attributes')
+
     ads = cp.deepcopy(adsorbate.atoms)
+
+    ads.translate((0., 0., adsorbate.distance))
+
+    if adsorbate.rot_vect is not None:
+        ads.rotate(adsorbate.angle, v = adsorbate.rot_vect)
 
     ads.translate((np.dot(adsorbate.position, [units[0][0], units[1][0]]),
                    np.dot(adsorbate.position, [units[0][1], units[1][1]]),
-                   adsorbate_height))
+                   atoms.cell[2][2]-vacuum/2.))
 
     atoms += ads
 
