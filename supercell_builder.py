@@ -13,7 +13,7 @@ from ase.constraints import FixAtoms
 
 print('\n'
 "########################################################################\n"
-"# SUPERCELL BUILDER version 0.1.13                                      \n"
+"# SUPERCELL BUILDER version 0.1.14                                      \n"
 "# Distributed under the GPLv3 license                                   \n"
 "# Author: Raffaele Cheula                                               \n"
 "# raffaele.cheula@polimi.it                                             \n"
@@ -137,7 +137,7 @@ class Slab:
         if symmetry == 'asymmetric':
             atoms = break_symmetry(atoms)
         elif symmetry == 'inversion':
-            atoms = inversion_symmetry(atoms)
+            atoms = inversion_symmetry(atoms, vacuum = vacuum)
         elif symmetry == 'planar' or symmetry is None:
             pass
         else:
@@ -192,7 +192,7 @@ class Slab:
         else:
             kpts = bulk.kpts_bulk
 
-        koffset = (0, 0, 1)
+        koffset = (0, 0, 0)
 
         atoms.set_pbc(True)
 
@@ -938,8 +938,8 @@ def break_symmetry(atoms, translation = 1e-3, epsi = 1e-5):
 # BOUNDARY ATOMS
 ################################################################################
 
-def boundary_atoms(atoms, base_boundary = False, outer_boundary = False, 
-                   epsi = 1e-5):
+def boundary_atoms(atoms, base_boundary = False, outer_boundary = True, 
+                   epsi = 1e-3):
 
     atoms_plus = cp.deepcopy(atoms)
 
@@ -962,14 +962,14 @@ def boundary_atoms(atoms, base_boundary = False, outer_boundary = False,
             atoms_plus += a_plus
 
     if base_boundary is True:
-        for a in atoms_plus:
+        for a in atoms:
             if abs(a.position[2]) < epsi:
                 a_plus = cp.deepcopy(a)
                 a_plus.position[2] += atoms.cell[2][2]
                 atoms_plus += a_plus
 
     if outer_boundary is True:
-        for a in atoms_plus:
+        for a in atoms:
             if abs(a.position[0] - atoms.cell[0][0] - atoms.cell[1][0]) < \
                epsi and abs(a.position[1] - atoms.cell[0][1] - \
                atoms.cell[1][1]) < epsi:
@@ -995,21 +995,19 @@ def boundary_atoms(atoms, base_boundary = False, outer_boundary = False,
 # INVERSION SYMMETRY
 ################################################################################
 
-def inversion_symmetry(atoms, vacuum = None, big_cell_inversion = True):
+def inversion_symmetry(atoms, vacuum = None, big_cell_inversion = False):
 
     if vacuum is None:
-        cell_height = atoms.cell[2][2]
-        atoms.center(vacuum = 0., axis = 2)
-        vacuum = cell_height-atoms.cell[2][2]
+        base_boundary = True
     else:
-        atoms.center(vacuum = 0., axis = 2)
+        base_boundary = False
 
     atoms = cut_surface(atoms)
 
-    sym = check_inversion_symmetry(atoms,
-                                   base_boundary  = True,
-                                   outer_boundary = True,
-                                   print_check    = False)
+    sym = check_inversion_symmetry(atoms          = atoms        ,
+                                   base_boundary  = base_boundary,
+                                   outer_boundary = True         ,
+                                   print_check    = False        )
 
     print('inversion symmetry =', sym)
 
@@ -1017,8 +1015,18 @@ def inversion_symmetry(atoms, vacuum = None, big_cell_inversion = True):
 
         if big_cell_inversion is False:
 
-            atoms_inv = create_inversion_symmetry(atoms)
-            sym = check_inversion_symmetry(atoms_inv, print_check = True)
+            try:
+                atoms_new = create_inversion_symmetry(atoms = atoms[:]     , 
+                                             base_boundary  = base_boundary, 
+                                             outer_boundary = False        ,
+                                             cut_slab       = False        )
+                sym = check_inversion_symmetry(atoms          = atoms_new    ,
+                                               base_boundary  = base_boundary,
+                                               outer_boundary = True         ,
+                                               print_check    = False        )
+                assert sym is True
+                atoms = atoms_new
+            except: pass
             print('inversion symmetry =', sym)
 
         if sym is not True:
@@ -1028,22 +1036,36 @@ def inversion_symmetry(atoms, vacuum = None, big_cell_inversion = True):
                       sum(atoms.cell[:2])[1]/2.)
             atoms *= (2, 2, 1)
             try:
-                atoms = create_inversion_symmetry(atoms, cut_slab = False)
-                sym = check_inversion_symmetry(atoms)
+                atoms_new = create_inversion_symmetry(atoms = atoms[:]     , 
+                                             base_boundary  = base_boundary, 
+                                             outer_boundary = False        ,
+                                             cut_slab       = False        )
+                sym = check_inversion_symmetry(atoms          = atoms_new    ,
+                                               base_boundary  = base_boundary,
+                                               outer_boundary = True         ,
+                                               print_check    = False        )
                 assert sym is True
+                atoms = atoms_new
             except:
-                atoms = create_inversion_symmetry(atoms, cut_slab = True)
-                sym = check_inversion_symmetry(atoms)
+                atoms = create_inversion_symmetry(atoms = atoms        ,
+                                         base_boundary  = base_boundary, 
+                                         outer_boundary = False        ,
+                                         cut_slab       = True         )
+                sym = check_inversion_symmetry(atoms          = atoms        ,
+                                               base_boundary  = base_boundary,
+                                               outer_boundary = True         ,
+                                               print_check    = False        )
             
-            atoms = cut_surface(atoms           = atoms,
+            atoms = cut_surface(atoms           = atoms                 ,
                                 surface_vectors = [[0.5, 0.], [0., 0.5]],
-                                origin          = origin)
-            sym = check_inversion_symmetry(atoms)
+                                origin          = origin                )
+            sym = check_inversion_symmetry(atoms          = atoms        ,
+                                           base_boundary  = base_boundary,
+                                           outer_boundary = True         ,
+                                           print_check    = False        )
             print('inversion symmetry =', sym)
             if sym is not True:
                 print('NO SYMMETRY FOUND!')
-        else:
-            atoms = atoms_inv
 
     if vacuum:
         atoms.center(vacuum = vacuum/2., axis = 2)
@@ -1054,14 +1076,16 @@ def inversion_symmetry(atoms, vacuum = None, big_cell_inversion = True):
 # CREATE INVERSION SYMMETRY
 ################################################################################
 
-def create_inversion_symmetry(atoms, base_boundary = False, 
-                              outer_boundary       = False,
-                              cut_slab             = False,
-                              epsi = 1e-5):
+def create_inversion_symmetry(atoms, 
+                              base_boundary  = False, 
+                              outer_boundary = False,
+                              cut_slab       = False,
+                              epsi           = 1e-4 ):
 
     print('\nCREATING INVERSION SYMMETRY')
-    atoms_plus = boundary_atoms(atoms, base_boundary = False,
-                                outer_boundary = False)
+    atoms_plus = boundary_atoms(atoms          = atoms         ,
+                                base_boundary  = base_boundary ,
+                                outer_boundary = outer_boundary)
 
     #try:
     #
@@ -1103,7 +1127,7 @@ def create_inversion_symmetry(atoms, base_boundary = False,
 
 def find_inversion_centre(atoms, cut_slab = False):
 
-    print('USING PYTHON (CYTHON ALSO AVAILABLE)\n')
+    print('USING PYTHON \n')
 
     c_matrix = np.array([ ((a.position + b.position) / 2.) for a in \
                atoms for b in atoms if b.symbol == a.symbol and \
@@ -1116,16 +1140,16 @@ def find_inversion_centre(atoms, cut_slab = False):
               np.around(c_matrix[j], decimals = 3)) ]) for i in \
               range(len(c_matrix)) ])
 
-    n_max = np.max(indices)
+    n_max = np.argmax(indices)
 
-    print('number of occurrences maximum =', n_max)
+    print('number of occurrences maximum =', np.max(indices))
 
     middles = [i for i in indices if 
                abs(c_matrix[i][2]-atoms.cell[2][2]/2.) < 1e-2]
 
-    m_max = np.max(middles)
+    m_max = np.argmax(middles)
 
-    print('number of occurrences in middle =', m_max)
+    print('number of occurrences in middle =', np.max(middles))
 
     if cut_slab is False:
 
@@ -1141,25 +1165,27 @@ def find_inversion_centre(atoms, cut_slab = False):
 # CHECK INVERSION SYMMETRY
 ################################################################################
 
-def check_inversion_symmetry(atoms, base_boundary = False, 
-                             outer_boundary = False, print_check = False):
+def check_inversion_symmetry(atoms,
+                             base_boundary  = False, 
+                             outer_boundary = True ,
+                             print_check    = False):
 
     inversion = False
 
     print('\nCHECKING INVERSION SYMMETRY')
     cont = 0
-    atoms = boundary_atoms(atoms, base_boundary = base_boundary,
+    atoms = boundary_atoms(atoms          = atoms         ,
+                           base_boundary  = base_boundary ,
                            outer_boundary = outer_boundary)
     atoms.center(vacuum = 0., axis = 2)
     centre = sum(atoms.cell)/2.
 
     for a in atoms:
-        a_check = 2. * centre - a.position
+        a_check = 2.*centre-a.position
         equal = False
         equal_check = False
         for b in atoms:
-            equal = np.allclose(a_check, b.position, 
-                                rtol = 1e-2, atol = 1e-3)
+            equal = np.allclose(a_check, b.position, rtol = 1e-1, atol = 1e-2)
             if equal is True:
                 cont += 1
                 equal_check = True
