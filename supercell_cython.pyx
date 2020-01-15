@@ -12,7 +12,7 @@ import numpy as np
 cimport cython
 cimport numpy as np
 from cpython.array cimport array
-from cython.operator cimport dereference as deref
+#from cython.operator cimport dereference as deref
 from libc.math cimport atan, acos, sqrt, round
 
 # PARAMETERS

@@ -13,7 +13,7 @@ from ase.constraints import FixAtoms
 
 print('\n'
 "########################################################################\n"
-"# SUPERCELL BUILDER version 0.1.14                                      \n"
+"# SUPERCELL BUILDER version 0.1.15                                      \n"
 "# Distributed under the GPLv3 license                                   \n"
 "# Author: Raffaele Cheula                                               \n"
 "# raffaele.cheula@polimi.it                                             \n"
@@ -112,44 +112,54 @@ class Slab:
             repetitions = (int(dimensions[0]), int(dimensions[1]))
 
         if input_slab is not None:
-            atoms = import_slab_structure(input_slab, repetitions)
+            atoms = import_slab_structure(input_slab = input_slab ,
+                                          dimensions = repetitions)
         else:
-            atoms = build_slab_structure(bulk.atoms            ,
-                                         bulk.bulk_type        ,
-                                         bulk.elements         ,
-                                         bulk.lattice_constants,
-                                         miller_index          ,
-                                         repetitions           ,
-                                         layers                )
+            atoms = build_slab_structure(atoms     = bulk.atoms            ,
+                                 bulk_type         = bulk.bulk_type        ,
+                                 elements          = bulk.elements         ,
+                                 lattice_constants = bulk.lattice_constants,
+                                 miller_index      = miller_index          ,
+                                 dimensions        = repetitions           ,
+                                 layers            = layers                )
 
         if surface_vectors is not None:
-            atoms = cut_surface(atoms, surface_vectors)
+            atoms = cut_surface(atoms           = atoms          , 
+                                surface_vectors = surface_vectors)
 
         if rotation_angle is not None:
-            atoms = rotate_slab(atoms, rotation_angle)
+            atoms = rotate_slab(atoms          = atoms         ,
+                                rotation_angle = rotation_angle)
 
         if cut_top is not None:
-            atoms = cut_top_slab(atoms, cut_top, vacuum = 0.)
+            atoms = cut_top_slab(atoms   = atoms  ,
+                                 cut_top = cut_top, 
+                                 vacuum  = 0.     )
 
         if cut_bottom is not None:
-            atoms = cut_bottom_slab(atoms, cut_bottom, vacuum = 0.)
+            atoms = cut_bottom_slab(atoms      = atoms     ,
+                                    cut_bottom = cut_bottom,
+                                    vacuum     = 0.        )
 
         if symmetry == 'asymmetric':
-            atoms = break_symmetry(atoms)
+            atoms = break_symmetry(atoms = atoms)
         elif symmetry == 'inversion':
-            atoms = inversion_symmetry(atoms, vacuum = vacuum)
-        elif symmetry == 'planar' or symmetry is None:
+            atoms = inversion_symmetry(atoms = atoms, vacuum = vacuum)
+        elif symmetry in ('planar', 'symmetric', None):
             pass
         else:
             raise NameError('Wrong symmetry keyword')
 
         if layers_fixed is not None:
-            atoms = fix_atoms(atoms, layers_fixed, layers, symmetry)
+            atoms = fix_atoms(atoms         = atoms        , 
+                              layers_fixed  = layers_fixed ,
+                              layers        = layers       ,
+                              symmetry      = symmetry     )
 
         atoms.center(vacuum = 0., axis = 2)
         slab_height = atoms.cell[2][2]
 
-        atoms = cut_surface(atoms)
+        atoms = cut_surface(atoms = atoms)
 
         if vacancies:
             if vacuum is not None:
@@ -182,7 +192,7 @@ class Slab:
             atoms.center(vacuum = vacuum/2., axis = 2)
 
         if sort_atoms is True:
-            atoms = sort_slab(atoms)
+            atoms = sort_slab(atoms = atoms)
 
         if scale_kpts is not None:
             kpts = calculate_kpts(atoms,
@@ -225,9 +235,11 @@ class Slab:
     def cut_slab(self, surface_vectors, big_dim = None,
                  origin = [0., 0.], epsi = 1e-5):
     
-        vector_a, vector_b = surface_vectors
-        atoms = cut_surface(self.atoms, surface_vectors, big_dim,
-                            origin, epsi)
+        atoms = cut_surface(atoms           = self.atoms     ,
+                            surface_vectors = surface_vectors,
+                            big_dim         = big_dim        ,
+                            origin          = origin         ,
+                            epsi            = epsi           )
 
     # -------------------------------------------------------------------
     #  ROTATE SLAB
@@ -242,31 +254,52 @@ class Slab:
     # -------------------------------------------------------------------
 
     def cut_top_slab(self, cut_top, starting = 'from slab bottom',
-                     vacuum = None, epsi = 1e-5):
+                     vacuum = None, epsi = 1e-3):
     
-        atoms = cut_top_slab(self.atoms, cut_top, starting,
-                             vacuum, epsi)
+        atoms = cut_top_slab(atoms    = self.atoms,
+                             cut_top  = cut_top   ,
+                             starting = starting  ,
+                             vacuum   = vacuum    ,
+                             epsi     = epsi      )
 
     # -------------------------------------------------------------------
     #  CUT BOTTOM SLAB
     # -------------------------------------------------------------------
 
     def cut_bottom_slab(self, cut_bottom, starting = 'from slab bottom',
-                        vacuum = None, epsi = 1e-5):
+                        vacuum = None, epsi = 1e-3):
     
-        atoms = cut_bottom_slab(self.atoms, cut_bottom, starting,
-                                vacuum, epsi)
+        atoms = cut_bottom_slab(atoms      = self.atoms, 
+                                cut_bottom = cut_bottom, 
+                                starting   = starting  ,
+                                vacuum     = vacuum    , 
+                                epsi       = epsi      )
 
     # -------------------------------------------------------------------
     #  FIX ATOMS
     # -------------------------------------------------------------------
 
-    def fix_atoms(self, layers_fixed, layers = None, symmetry = None):
-    
+    def fix_atoms_slab(self, layers_fixed = None, layers = None, 
+                       symmetry = None, vacuum = None, distance = None):
+
         if layers is None:
             layers = self.layers
 
-        atoms = fix_atoms(self.atoms, layers_fixed, layers, symmetry)
+        if layers_fixed is None:
+            layers_fixed = self.layers_fixed
+
+        if symmetry is None:
+            symmetry = self.symmetry
+
+        if vacuum is None:
+            vacuum = self.vacuum
+
+        self.atoms = fix_atoms(atoms        = self.atoms  , 
+                               layers_fixed = layers_fixed, 
+                               layers       = layers      ,
+                               symmetry     = symmetry    ,
+                               distance     = distance    ,
+                               vacuum       = vacuum      )
 
     # -------------------------------------------------------------------
     #  ADD ADSORBATES
@@ -281,10 +314,14 @@ class Slab:
             adsorbates = [adsorbates]
 
         for adsorbate in adsorbates:
-            atoms = add_adsorbate(self.atoms, adsorbate, symmetry, 
-                                  self.dimensions, self.bulk.bulk_type,
-                                  self.miller_index, self.slab_height,
-                                  self.vacuum)
+            atoms = add_adsorbate(atoms        = self.atoms         , 
+                                  adsorbate    = adsorbate          , 
+                                  symmetry     = symmetry           , 
+                                  dimensions   = self.dimensions    , 
+                                  bulk_type    = self.bulk.bulk_type,
+                                  miller_index = self.miller_index  , 
+                                  slab_height  = self.slab_height   ,
+                                  vacuum       = self.vacuum        )
 
     # -------------------------------------------------------------------
     #  ADD VACANCIES
@@ -299,8 +336,19 @@ class Slab:
             vacancies = [vacancies]
 
         for vacancy in vacancies:
-            atoms = add_vacancy(self.atoms, vacancy, symmetry, 
-                                self.dimensions)
+            atoms = add_vacancy(atoms      = self.atoms     ,
+                                vacancy    = vacancy        ,
+                                symmetry   = symmetry       ,
+                                dimensions = self.dimensions,
+                                vacuum     = self.vacuum    )
+
+    # -------------------------------------------------------------------
+    #  SORT SLAB
+    # -------------------------------------------------------------------
+
+    def inversion_symmetry_slab(self):
+    
+        atoms = inversion_symmetry(self.atoms)
 
     # -------------------------------------------------------------------
     #  SORT SLAB
@@ -319,27 +367,48 @@ class Slab:
         self.atoms.center(vacuum = vacuum/2., axis = 2)
 
     # -------------------------------------------------------------------
+    #  GET LAYERS HEIGHT
+    # -------------------------------------------------------------------
+
+    def get_layers_height(self):
+
+        heights = []
+
+        for layers in (1, 2):
+
+            slab_copy = Slab(bulk            = self.bulk        ,
+                             miller_index    = self.miller_index,
+                             layers          = layers           ,
+                             vacuum          = 0.               )
+
+            heights += [slab_copy.atoms.cell[2][2]]
+
+        layers_height = heights[1]-heights[0]
+
+        return layers_height
+
+    # -------------------------------------------------------------------
     #  UPDATE
     # -------------------------------------------------------------------
 
     def update(self):
 
-        slab = Slab(bulk            = self.bulk,
-                    input_slab      = self.input_slab,
-                    miller_index    = self.miller_index,
+        slab = Slab(bulk            = self.bulk           ,
+                    input_slab      = self.input_slab     ,
+                    miller_index    = self.miller_index   ,
                     surface_vectors = self.surface_vectors,
-                    dimensions      = self.dimensions,
-                    layers          = self.layers,
-                    layers_fixed    = self.layers_fixed,
-                    symmetry        = self.symmetry,
-                    rotation_angle  = self.rotation_angle,
-                    cut_top         = self.cut_top,
-                    cut_bottom      = self.cut_bottom,
-                    adsorbates      = self.adsorbates,
-                    vacancies       = self.vacancies,
-                    scale_kpts      = self.scale_kpts,
-                    vacuum          = self.vacuum,
-                    sort_atoms      = self.sort_atoms)
+                    dimensions      = self.dimensions     ,
+                    layers          = self.layers         ,
+                    layers_fixed    = self.layers_fixed   ,
+                    symmetry        = self.symmetry       ,
+                    rotation_angle  = self.rotation_angle ,
+                    cut_top         = self.cut_top        ,
+                    cut_bottom      = self.cut_bottom     ,
+                    adsorbates      = self.adsorbates     ,
+                    vacancies       = self.vacancies      ,
+                    scale_kpts      = self.scale_kpts     ,
+                    vacuum          = self.vacuum         ,
+                    sort_atoms      = self.sort_atoms     )
 
         return slab
 
@@ -349,17 +418,17 @@ class Slab:
 
 class Adsorbate:
 
-    def __init__(self,
-                 atoms,
-                 position = None,
-                 height   = None,
-                 distance = None,
+    def __init__(self     ,
+                 atoms    ,
+                 position = None       ,
+                 height   = None       ,
+                 distance = None       ,
                  units    = 'unit cell',
-                 site     = None,
-                 variant  = 0,
-                 quadrant = 0,
-                 rot_vect = None,
-                 angle    = 0.):
+                 site     = None       ,
+                 variant  = 0          ,
+                 quadrant = 0          ,
+                 rot_vect = None       ,
+                 angle    = 0.         ):
 
         self.atoms    = atoms
         self.position = position
@@ -378,10 +447,10 @@ class Adsorbate:
 
 class Vacancy:
 
-    def __init__(self,
-                 position,
-                 height   = None,
-                 distance = None,
+    def __init__(self     ,
+                 position ,
+                 height   = None       ,
+                 distance = None       ,
                  units    = 'unit cell'):
 
         self.position = position
@@ -412,7 +481,7 @@ def convert_miller_index(miller_index):
 
 def import_bulk_structure(input_bulk):
 
-    from supercell_utils import read_qe_out
+    from qe_utils import read_qe_out
 
     try: atoms = read_qe_out(input_bulk)
     except: atoms = read(input_bulk)
@@ -468,7 +537,9 @@ def build_bulk_structure(bulk_type, elements, lattice_constants):
 def custom_bulk(bulk_type, elements, lattice_constants):
 
     if bulk_type == 'corundum':
+
         dim_cell = (3, 3, 12)
+
         basis = [[ 1.,  2.,  0.], [ 2.,  1.,  0.], [ 0.,  2.,  1.],
                  [ 1.,  1.,  1.], [ 2.,  0.,  1.], [ 0.,  0.,  2.],
                  [ 2.,  1.,  2.], [ 0.,  1.,  3.], [ 1.,  0.,  3.],
@@ -479,24 +550,47 @@ def custom_bulk(bulk_type, elements, lattice_constants):
                  [ 2.,  1.,  8.], [ 0.,  2.,  9.], [ 1.,  1.,  9.],
                  [ 2.,  0.,  9.], [ 0.,  0., 10.], [ 1.,  2., 10.],
                  [ 0.,  1., 11.], [ 1.,  0., 11.], [ 2.,  2., 11.]]
+
         elem_basis = (0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1,
                       0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1)
+
         bulk_str = 'hexagonal'
 
     elif bulk_type == 'rutile':
+
         dim_cell = (6, 6, 2)
+
         basis = [[0.00, 0.00, 0.00], [1.85, 4.15, 0.00],
                  [4.15, 1.85, 0.00], [1.15, 1.15, 1.00],
                  [3.00, 3.00, 1.00], [4.85, 4.85, 1.00]]
+
         elem_basis = (0, 1, 1, 1, 0, 1)
+
         bulk_str = 'tetragonal'
 
     elif bulk_type == 'graphene':
+
         dim_cell = (3, 3, 2)
+
         basis = [[0, 0, 0], [1, 2, 0],
                  [0, 0, 1], [2, 1, 1]]
+
         elem_basis = (0, 0, 0, 0)
+
         bulk_str = 'hexagonal'
+
+    elif bulk_type == 'rocksalt':
+        
+        dim_cell = (1, 1, 1)
+
+        basis = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.5], [0.0, 0.5, 0.0],
+                 [0.0, 0.5, 0.5], [0.5, 0.0, 0.0], [0.5, 0.0, 0.5],
+                 [0.5, 0.5, 0.0], [0.5, 0.5, 0.5]]
+
+        elem_basis = (0, 1, 1, 0, 1, 0, 0, 1)
+
+        bulk_str = 'cubic'
+        lattice_constants = lattice_constants[0]
 
     else:
         raise NameError('bulk type "{}" not implemented'.format(bulk_type))
@@ -532,8 +626,8 @@ def custom_bulk(bulk_type, elements, lattice_constants):
 
     CustomCell = CustomCellFactory()
     atoms = CustomCell(symbol          = elements[:max(elem_basis)+1],
-                       latticeconstant = lattice_constants,
-                       size            = (1, 1, 1))
+                       latticeconstant = lattice_constants           ,
+                       size            = (1, 1, 1)                   )
 
     return atoms
 
@@ -543,7 +637,7 @@ def custom_bulk(bulk_type, elements, lattice_constants):
 
 def import_slab_structure(input_slab, dimensions):
 
-    from supercell_utils import read_qe_out
+    from qe_utils import read_qe_out
 
     try: atoms = read_qe_out(input_slab)
     except: atoms = read(input_slab)
@@ -786,12 +880,12 @@ def cut_surface(atoms, surface_vectors = [[1., 0.], [0., 1.]],
     new = np.vstack([np.dot(vector_a, base),
                      np.dot(vector_b, base)])
 
-    del atoms [[ a.index for a in atoms \
+    del atoms [[ a.index for a in atoms
         if a.position[1] < new[0][1]/new[0][0]*a.position[0]-epsi
-        or a.position[1] > new[0][1]/new[0][0]*(a.position[0]-new[1][0]) \
-                            + cell[1][1] - epsi
+        or a.position[1] > new[0][1]/new[0][0]*(a.position[0]-new[1][0])
+                            + cell[1][1]-epsi
         or a.position[0] < new[1][0]/new[1][1]*a.position[1]-epsi
-        or a.position[0] > new[1][0]/new[1][1]*(a.position[1]-new[0][1]) \
+        or a.position[0] > new[1][0]/new[1][1]*(a.position[1]-new[0][1])
                             + new[0][0]-epsi ]]
 
     atoms.set_cell(np.matrix([[new[0][0], new[0][1], 0.],
@@ -833,22 +927,46 @@ def rotate_slab(atoms, rotation_angle):
 # FIX ATOMS
 ################################################################################
 
-def fix_atoms(atoms, layers_fixed, layers, symmetry = None):
+def fix_atoms(atoms, layers_fixed, layers, symmetry = None, distance = None,
+              vacuum = None, epsi = 1e-2):
+
+    if vacuum:
+        atoms.center(vacuum = 0., axis = 2)
 
     atoms = sort_slab(atoms)
 
     if symmetry in (None, 'asymmetric'):
-        indices = [ a.index for a in atoms \
-                    if a.index+1 <= layers_fixed/layers*len(atoms) ]
+        
+        if distance is not None:
 
-    elif symmetry in ('planar', 'inversion'):
-        indices = [ a.index for a in atoms \
-                    if a.index+1 <= 0.5*(len(atoms)+1) + \
-                    0.5*len(atoms)*layers_fixed/layers \
-                    and a.index+1 >= 0.5*(len(atoms)+1) - \
-                    0.5*len(atoms)*layers_fixed/layers ]
+            indices = [ a.index for a in atoms 
+                        if a.position[2] < slab.cell[2][2]-distance ]
+            
+        else:
+
+            indices = [ a.index for a in atoms
+                        if a.index+1 <= layers_fixed/layers*len(atoms)+epsi ]
+
+    elif symmetry in ('planar', 'symmetric', 'inversion'):
+        
+        if distance is not None:
+            
+            indices = [ a.index for a in atoms 
+                        if a.position[2] > 0.+distance
+                        and a.position[2] < atoms.cell[2][2]-distance ]
+            
+        else:
+
+            indices = [ a.index for a in atoms
+                        if a.index+1 <= 0.5*(len(atoms)+1) + 
+                        0.5*len(atoms)*layers_fixed/layers+epsi
+                        and a.index+1 >= 0.5*(len(atoms)+1) - 
+                        0.5*len(atoms)*layers_fixed/layers-epsi ]
 
     atoms.set_constraint(FixAtoms(indices = indices))
+
+    if vacuum:
+        atoms.center(vacuum = vacuum/2., axis = 2)
 
     return atoms
 
@@ -868,7 +986,7 @@ def sort_slab(atoms):
 ################################################################################
 
 def cut_top_slab(atoms, cut_top, starting = 'from slab top',
-                 vacuum = None, epsi = 1e-5, verbosity = 'high'):
+                 vacuum = None, epsi = 1e-3, verbosity = 'high'):
 
     if starting in ('from slab bottom', 'from slab top'):
         if vacuum is None:
@@ -879,13 +997,13 @@ def cut_top_slab(atoms, cut_top, starting = 'from slab top',
             atoms.center(vacuum = 0., axis = 2)
 
     if starting in ('from slab bottom', 'from cell bottom'):
-        cut_height = cut_top + epsi
+        cut_height = cut_top+epsi
     elif starting in ('from slab top', 'from cell top'):
         cut_height = atoms.cell[2][2]-cut_top+epsi
 
     if verbosity == 'high':
-        print('deleted top atoms:', len([ a.index for a in atoms \
-            if a.position[2] > cut_height ]))
+        print('deleted top atoms:', len([ a.index for a in atoms
+                                          if a.position[2] > cut_height ]))
     del atoms [[ a.index for a in atoms if a.position[2] > cut_height ]]
 
     if vacuum:
@@ -898,7 +1016,7 @@ def cut_top_slab(atoms, cut_top, starting = 'from slab top',
 ################################################################################
 
 def cut_bottom_slab(atoms, cut_bottom, starting = 'from slab bottom',
-                    vacuum = None, epsi = 1e-5, verbosity = 'high'):
+                    vacuum = None, epsi = 1e-3, verbosity = 'high'):
 
     if starting in ('from slab bottom', 'from slab top'):
         if vacuum is None:
@@ -909,13 +1027,13 @@ def cut_bottom_slab(atoms, cut_bottom, starting = 'from slab bottom',
             atoms.center(vacuum = 0., axis = 2)
 
     if starting in ('from slab bottom', 'from cell bottom'):
-        cut_height = cut_bottom - epsi
+        cut_height = cut_bottom-epsi
     elif starting in ('from slab top', 'from cell top'):
         cut_height = atoms.cell[2][2]-cut_bottom-epsi
 
     if verbosity == 'high':
-        print('deleted bottom atoms:', len([ a.index for a in atoms \
-            if a.position[2] < cut_height ]))
+        print('deleted bottom atoms:', len([ a.index for a in atoms
+                                             if a.position[2] < cut_height ]))
     del atoms [[ a.index for a in atoms if a.position[2] < cut_height ]]
 
     if vacuum:
@@ -949,14 +1067,14 @@ def boundary_atoms(atoms, base_boundary = False, outer_boundary = True,
             a_plus.position[:2] += sum(atoms.cell[:2])[:2]
             atoms_plus += a_plus
 
-        if abs(a.position[0] - a.position[1] * atoms.cell[1][0] / \
-           atoms.cell[1][1]) < epsi:
+        if (abs(a.position[0] - a.position[1] * atoms.cell[1][0] /
+            atoms.cell[1][1]) < epsi):
             a_plus = cp.deepcopy(a)
             a_plus.position[:2] += atoms.cell[0][:2]
             atoms_plus += a_plus
 
-        if abs(a.position[1] - a.position[0] * atoms.cell[0][1] / \
-           atoms.cell[0][0]) < epsi:
+        if (abs(a.position[1] - a.position[0] * atoms.cell[0][1] /
+            atoms.cell[0][0]) < epsi):
             a_plus = cp.deepcopy(a)
             a_plus.position[:2] += atoms.cell[1][:2]
             atoms_plus += a_plus
@@ -970,21 +1088,21 @@ def boundary_atoms(atoms, base_boundary = False, outer_boundary = True,
 
     if outer_boundary is True:
         for a in atoms:
-            if abs(a.position[0] - atoms.cell[0][0] - atoms.cell[1][0]) < \
-               epsi and abs(a.position[1] - atoms.cell[0][1] - \
-               atoms.cell[1][1]) < epsi:
+            if (abs(a.position[0] - atoms.cell[0][0] - atoms.cell[1][0]) <
+                epsi and abs(a.position[1] - atoms.cell[0][1] -
+                atoms.cell[1][1]) < epsi):
                 a_plus = cp.deepcopy(a)
                 a_plus.position[:2] -= sum(atoms.cell[:2])[:2]
                 atoms_plus += a_plus
 
-            if abs(a.position[0] - atoms.cell[0][0] - a.position[1] * \
-               atoms.cell[1][0] / atoms.cell[1][1]) < epsi:
+            if (abs(a.position[0] - atoms.cell[0][0] - a.position[1] *
+                atoms.cell[1][0] / atoms.cell[1][1]) < epsi):
                 a_plus = cp.deepcopy(a)
                 a_plus.position[:2] -= atoms.cell[0][:2]
                 atoms_plus += a_plus
 
-            if abs(a.position[1] - atoms.cell[1][1] - a.position[0] * \
-               atoms.cell[0][1] / atoms.cell[0][0]) < epsi:
+            if (abs(a.position[1] - atoms.cell[1][1] - a.position[0] *
+                atoms.cell[0][1] / atoms.cell[0][0]) < epsi):
                 a_plus = cp.deepcopy(a)
                 a_plus.position[:2] -= atoms.cell[1][:2]
                 atoms_plus += a_plus
@@ -995,75 +1113,81 @@ def boundary_atoms(atoms, base_boundary = False, outer_boundary = True,
 # INVERSION SYMMETRY
 ################################################################################
 
-def inversion_symmetry(atoms, vacuum = None, big_cell_inversion = False):
+def inversion_symmetry(atoms, vacuum = None):
 
     if vacuum is None:
         base_boundary = True
     else:
+        atoms.center(vacuum = 0., axis = 2)
         base_boundary = False
 
     atoms = cut_surface(atoms)
 
     sym = check_inversion_symmetry(atoms          = atoms        ,
                                    base_boundary  = base_boundary,
-                                   outer_boundary = True         ,
-                                   print_check    = False        )
+                                   outer_boundary = True         )
 
-    print('inversion symmetry =', sym)
+    print('\n INVERSION SYMMETRY =', sym)
 
     if sym is not True:
 
-        if big_cell_inversion is False:
+        atoms_new = create_inversion_symmetry(
+                        atoms          = cp.deepcopy(atoms), 
+                        base_boundary  = base_boundary     , 
+                        outer_boundary = True              ,
+                        cut_slab       = False             )
 
-            try:
-                atoms_new = create_inversion_symmetry(atoms = atoms[:]     , 
-                                             base_boundary  = base_boundary, 
-                                             outer_boundary = False        ,
-                                             cut_slab       = False        )
-                sym = check_inversion_symmetry(atoms          = atoms_new    ,
-                                               base_boundary  = base_boundary,
-                                               outer_boundary = True         ,
-                                               print_check    = False        )
-                assert sym is True
+        sym = check_inversion_symmetry(atoms          = atoms_new    ,
+                                       base_boundary  = base_boundary,
+                                       outer_boundary = True         )
+
+        print('\n INVERSION SYMMETRY =', sym)
+
+        if sym is True:
+
+            atoms = atoms_new
+
+        else:
+
+            #print('\nBIG CELL INVERSION SYMMETRY')
+            #
+            #atoms *= (2, 2, 1)
+            #
+            #atoms_new = create_inversion_symmetry(
+            #                atoms          = cp.deepcopy(atoms), 
+            #                base_boundary  = base_boundary     , 
+            #                outer_boundary = True              ,
+            #                cut_slab       = False             )
+            #
+            #sym = check_inversion_symmetry(atoms          = atoms_new    ,
+            #                               base_boundary  = base_boundary,
+            #                               outer_boundary = True         )
+
+            if sym is True:
+
                 atoms = atoms_new
-            except: pass
-            print('inversion symmetry =', sym)
 
-        if sym is not True:
+            else:
 
-            print('\nBIG CELL INVERSION SYMMETRY')
-            origin = (sum(atoms.cell[:2])[0]/2.,
-                      sum(atoms.cell[:2])[1]/2.)
-            atoms *= (2, 2, 1)
-            try:
-                atoms_new = create_inversion_symmetry(atoms = atoms[:]     , 
-                                             base_boundary  = base_boundary, 
-                                             outer_boundary = False        ,
-                                             cut_slab       = False        )
-                sym = check_inversion_symmetry(atoms          = atoms_new    ,
-                                               base_boundary  = base_boundary,
-                                               outer_boundary = True         ,
-                                               print_check    = False        )
-                assert sym is True
-                atoms = atoms_new
-            except:
-                atoms = create_inversion_symmetry(atoms = atoms        ,
-                                         base_boundary  = base_boundary, 
-                                         outer_boundary = False        ,
-                                         cut_slab       = True         )
+                atoms = create_inversion_symmetry(
+                            atoms          = atoms        ,
+                            base_boundary  = base_boundary, 
+                            outer_boundary = True         ,
+                            cut_slab       = True         )
+
                 sym = check_inversion_symmetry(atoms          = atoms        ,
                                                base_boundary  = base_boundary,
-                                               outer_boundary = True         ,
-                                               print_check    = False        )
+                                               outer_boundary = True         )
             
-            atoms = cut_surface(atoms           = atoms                 ,
-                                surface_vectors = [[0.5, 0.], [0., 0.5]],
-                                origin          = origin                )
+            #atoms = cut_surface(atoms           = atoms                 ,
+            #                    surface_vectors = [[0.5, 0.], [0., 0.5]])
+
             sym = check_inversion_symmetry(atoms          = atoms        ,
                                            base_boundary  = base_boundary,
-                                           outer_boundary = True         ,
-                                           print_check    = False        )
-            print('inversion symmetry =', sym)
+                                           outer_boundary = True         )
+
+            print('\n INVERSION SYMMETRY =', sym)
+
             if sym is not True:
                 print('NO SYMMETRY FOUND!')
 
@@ -1080,41 +1204,32 @@ def create_inversion_symmetry(atoms,
                               base_boundary  = False, 
                               outer_boundary = False,
                               cut_slab       = False,
-                              epsi           = 1e-4 ):
+                              epsi           = 1e-3 ):
 
     print('\nCREATING INVERSION SYMMETRY')
+
     atoms_plus = boundary_atoms(atoms          = atoms         ,
                                 base_boundary  = base_boundary ,
                                 outer_boundary = outer_boundary)
 
-    #try:
-    #
-    #    from supercell_cython import find_inversion_centre_cython
-    #    
-    #    cut_slab = True
-    #    
-    #    centre = find_inversion_centre_cython(atoms_plus.get_positions(),
-    #                                          atoms_plus.get_chemical_symbols())
-    #
-    #except ImportError:
-    #
-    #    centre = find_inversion_centre(atoms_plus, cut_slab = cut_slab)
-
-    centre = find_inversion_centre(atoms_plus, cut_slab = cut_slab)
+    centre = find_inversion_centre(atoms          = atoms_plus    ,
+                                   cut_slab       = cut_slab      ,
+                                   base_boundary  = base_boundary ,
+                                   outer_boundary = outer_boundary)
 
     origin = centre-sum(atoms.cell)/2.
 
     if cut_slab is True:
 
         if origin[2] < 0.:
-            print('deleted top atoms:', len([ a.index for a in atoms \
+            print('deleted top atoms:', len([ a.index for a in atoms
                 if a.position[2] > 2.*centre[2]+epsi ]))
-            del atoms [[ a.index for a in atoms \
+            del atoms [[ a.index for a in atoms
                 if a.position[2] > 2.*centre[2]+epsi ]]
         elif origin[2] > 0.:
-            print('deleted bottom atoms:', len([ a.index for a in atoms \
+            print('deleted bottom atoms:', len([ a.index for a in atoms
                 if a.position[2] < 2.*centre[2]-atoms.cell[2][2]-epsi ]))
-            del atoms [[ a.index for a in atoms \
+            del atoms [[ a.index for a in atoms
                 if a.position[2] < 2.*centre[2]-atoms.cell[2][2]-epsi ]]
 
     atoms = cut_surface(atoms, origin = origin[:2])
@@ -1125,39 +1240,95 @@ def create_inversion_symmetry(atoms,
 # FIND INVERSION CENTRE
 ################################################################################
 
-def find_inversion_centre(atoms, cut_slab = False):
+def find_inversion_centre(atoms,
+                          cut_slab       = False,
+                          base_boundary  = False,
+                          outer_boundary = False,
+                          epsi           = 1e-3 ):
 
-    print('USING PYTHON \n')
+    centre = [0., 0., 0.]
 
-    c_matrix = np.array([ ((a.position + b.position) / 2.) for a in \
-               atoms for b in atoms if b.symbol == a.symbol and \
-               b.index >= a.index ])
+    c_matrix = np.array([(a.position + b.position)/2.
+                         for a in atoms
+                         for b in atoms 
+                         if b.symbol == a.symbol
+                         if b.magmom == a.magmom
+                         if b.index >= a.index ])
 
     print('number of centres =', len(c_matrix))
 
-    indices = np.array([ len([ j for j in range(i, len(c_matrix)) if \
-              np.array_equal(np.around(c_matrix[i], decimals = 3),
-              np.around(c_matrix[j], decimals = 3)) ]) for i in \
-              range(len(c_matrix)) ])
+    indices = np.array([len([j for j in range(i, len(c_matrix)) 
+                             if np.allclose(c_matrix[i], c_matrix[j],
+                                            rtol = 1e-1, atol = 1e-2)])
+                        for i in range(len(c_matrix))])
 
-    n_max = np.argmax(indices)
+    middles = np.copy(indices)
 
-    print('number of occurrences maximum =', np.max(indices))
+    for i in range(len(middles)):
+        if abs(c_matrix[i][2]-atoms.cell[2][2]/2.) > 1e-2:
+            middles[i] = 0
 
-    middles = [i for i in indices if 
-               abs(c_matrix[i][2]-atoms.cell[2][2]/2.) < 1e-2]
+    n_mid = len([i for i in range(len(middles)) if middles[i] > 1])
 
-    m_max = np.argmax(middles)
-
-    print('number of occurrences in middle =', np.max(middles))
+    print('number of centres in the middle =', n_mid)
 
     if cut_slab is False:
 
-        centre = c_matrix[middles[m_max]]
+        for i in range(len(middles)):
+
+            if middles[i] > 1:
+
+                centre = c_matrix[i]
+                origin = centre-sum(atoms.cell)/2.
+
+                atoms_new = cut_surface(atoms  = cp.deepcopy(atoms),
+                                        origin = origin[:2]        )
+
+                sym = check_inversion_symmetry(atoms          = atoms_new     ,
+                                               base_boundary  = base_boundary ,
+                                               outer_boundary = outer_boundary)
+
+                if sym is True:
+                    break
 
     else:
 
-        centre = c_matrix[indices[n_max]]
+        del_vector = np.ones(len(c_matrix))*len(atoms)
+
+        for i in range(len(c_matrix)):
+
+            if indices[i] > 1:
+
+                centre = c_matrix[i]
+                origin = centre-sum(atoms.cell)/2.
+            
+                atoms_new = cut_surface(atoms  = cp.deepcopy(atoms),
+                                        origin = origin[:2]        )
+            
+                if origin[2] < 0.:
+    
+                    height = 2.*centre[2]+epsi
+                    del_atoms = len([ a.index for a in atoms_new
+                                      if a.position[2] > height ])
+                    del atoms_new [[ a.index for a in atoms_new
+                                      if a.position[2] > height ]]
+    
+                elif origin[2] > 0.:
+    
+                    height = 2.*centre[2]-atoms_new.cell[2][2]-epsi
+                    del_atoms = len([ a.index for a in atoms
+                                      if a.position[2] < height ])
+                    del atoms_new [[ a.index for a in atoms_new
+                                      if a.position[2] < height ]]
+            
+                sym = check_inversion_symmetry(atoms          = atoms_new     ,
+                                               base_boundary  = base_boundary ,
+                                               outer_boundary = outer_boundary)
+            
+                if sym is True:
+                    del_vector[i] = del_atoms
+
+        centre = c_matrix[np.argmin(del_vector)]
 
     return centre
 
@@ -1167,35 +1338,40 @@ def find_inversion_centre(atoms, cut_slab = False):
 
 def check_inversion_symmetry(atoms,
                              base_boundary  = False, 
-                             outer_boundary = True ,
-                             print_check    = False):
+                             outer_boundary = True ):
 
     inversion = False
 
     print('\nCHECKING INVERSION SYMMETRY')
+
     cont = 0
+
     atoms = boundary_atoms(atoms          = atoms         ,
                            base_boundary  = base_boundary ,
                            outer_boundary = outer_boundary)
+
     atoms.center(vacuum = 0., axis = 2)
+
     centre = sum(atoms.cell)/2.
 
     for a in atoms:
+
         a_check = 2.*centre-a.position
-        equal = False
         equal_check = False
-        for b in atoms:
+
+        for b in [b for b in atoms 
+                  if b.symbol == a.symbol
+                  if b.magmom == a.magmom]:
+
             equal = np.allclose(a_check, b.position, rtol = 1e-1, atol = 1e-2)
+
             if equal is True:
                 cont += 1
                 equal_check = True
                 break
-        if equal_check is False and print_check is True:
-            print(np.around(a.position, decimals = 3), 
-                  'has no corrispondent in:',
-                  np.around(a_check, decimals = 3))
 
-    print('check inversion:', len(atoms), cont)
+    print('n atoms  = {0:4d}'.format(len(atoms)))
+    print('n checks = {0:4d}'.format(cont))
 
     if cont >= len(atoms):
         inversion = True
@@ -1350,7 +1526,7 @@ def add_adsorbate(atoms, adsorbate, symmetry = None, dimensions = (1, 1),
             a.position[2] = atoms.cell[2][2]-a.position[2]
         atoms += ads_sym
 
-    elif symmetry == 'inversion':
+    elif symmetry in ('symmetric', 'inversion'):
     
         ads_sym = cp.deepcopy(ads)
         for a in ads_sym:
@@ -1404,16 +1580,16 @@ def add_vacancy(atoms, vacancy, symmetry = None, dimensions = (1, 1),
         del atoms [[ a.index for a in atoms if np.allclose(vacancy_sym,
                      a.position, rtol = 1e-2, atol = 1e-3) ]]
 
-    elif symmetry == 'inversion':
+    elif symmetry in ('symmetric', 'inversion'):
 
         vacancy_sym = [sum(atoms.cell[:2])[0]-vacancy_pos[0],
                        sum(atoms.cell[:2])[1]-vacancy_pos[1],
                        atoms.cell[2][2]-vacancy_height]
 
-        if abs(vacancy_pos[0]-vacancy_pos[1]*atoms.cell[1][0] / \
-           atoms.cell[1][1]) < epsi \
-        or abs(vacancy_pos[1]-vacancy_pos[0]*atoms.cell[0][1] / \
-           atoms.cell[0][0]) < epsi:
+        if (abs(vacancy_pos[0]-vacancy_pos[1]*atoms.cell[1][0] /
+            atoms.cell[1][1]) < epsi
+        or abs(vacancy_pos[1]-vacancy_pos[0]*atoms.cell[0][1] /
+               atoms.cell[0][0]) < epsi):
             vacancy_sym[:2] = vacancy_pos[:2]
 
         del atoms [[ a.index for a in atoms if np.allclose(vacancy_sym,
@@ -1427,19 +1603,21 @@ def add_vacancy(atoms, vacancy, symmetry = None, dimensions = (1, 1),
 
 def calculate_kpts(atoms, cell, kpts, scale_kpts = 'xy', epsi = 1e-4):
 
-    kpts = list(np.copy(kpts))
+    if kpts is not None:
+
+        kpts = list(np.copy(kpts))
+        
+        kpts[0] *= np.linalg.norm(cell[0])/np.linalg.norm(atoms.cell[0])
+        kpts[0] = int(np.ceil(kpts[0]-epsi))
     
-    kpts[0] *= np.linalg.norm(cell[0])/np.linalg.norm(atoms.cell[0])
-    kpts[0] = int(np.ceil(kpts[0]-epsi))
-
-    kpts[1] *= np.linalg.norm(cell[1])/np.linalg.norm(atoms.cell[1])
-    kpts[1] = int(np.ceil(kpts[1]-epsi))
-
-    if scale_kpts == 'xyz':
-        kpts[2] *= cell[2][2]/atoms.cell[2][2]
-        kpts[2] = int(np.ceil(kpts[2]-epsi))
-    else:
-        kpts[2] = 1
+        kpts[1] *= np.linalg.norm(cell[1])/np.linalg.norm(atoms.cell[1])
+        kpts[1] = int(np.ceil(kpts[1]-epsi))
+    
+        if scale_kpts == 'xyz':
+            kpts[2] *= cell[2][2]/atoms.cell[2][2]
+            kpts[2] = int(np.ceil(kpts[2]-epsi))
+        else:
+            kpts[2] = 1
 
     return kpts
 
