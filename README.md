@@ -1,4 +1,4 @@
-# supercell_builder (version 0.1.15)
+# supercell_builder
 
 ## **Bulk:**
 
