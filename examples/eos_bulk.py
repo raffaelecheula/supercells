@@ -8,7 +8,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import numpy as np
 from ase.eos import EquationOfState
-from qe_utils import read_eos_outputs
+from shape.qe_utils import read_eos_outputs
 
 ################################################################################
 # EQUATION OF STATE

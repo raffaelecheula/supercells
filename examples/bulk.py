@@ -9,8 +9,8 @@ import os
 import numpy as np
 from ase.eos import EquationOfState
 from ase.calculators.espresso import Espresso
-from supercell_builder import Bulk
-from qe_utils import get_atom_list, assign_hubbard_U, create_eos_inputs
+from supercells.builder import Bulk
+from shape.qe_utils import get_atom_list, assign_hubbard_U, create_eos_inputs
 
 ################################################################################
 # BULK
