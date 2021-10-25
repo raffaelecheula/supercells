@@ -24,6 +24,222 @@ from supercell_builder import (cut_surface             ,
                                check_inversion_symmetry)
 
 ################################################################################
+# GET INTERACT LEN
+################################################################################
+
+def get_interact_len(bulk, bulk_type):
+
+    lattice_constant = bulk.cell[0][0]
+
+    if bulk_type is 'fcc' or 'fcc_reduced':
+        interact_len = sqrt(lattice_constant * 2)
+
+    elif bulk_type is 'bcc':
+        interact_len = ((lattice_constant / 2.)**2. * 3.)**0.5
+
+    elif bulk_type is 'simple_cubic':
+        interact_len = lattice_constant
+
+    return interact_len
+
+################################################################################
+# NEIGHBOR ATOMS
+################################################################################
+
+def get_neighbor_atoms(bulk, interact_len, epsi = 1e-4):
+
+    atoms = bulk[:]
+    cell_vectors = atoms.cell
+
+    atoms *= (3, 3, 3)
+    atoms = boundary_atoms(atoms, base_boundary = True)
+    atoms.translate(-sum(cell_vectors))
+
+    del atoms [[ a.index for a in atoms \
+        if np.linalg.norm(a.position) > interact_len + epsi ]]
+
+    atoms.set_cell(cell_vectors)
+
+    del atoms [[ a.index for a in atoms \
+        if np.array_equal(a.position, [0., 0., 0.]) ]]
+
+    return atoms
+
+################################################################################
+# GET NEIGHBOR ATOMS FCC
+################################################################################
+
+def get_neighbor_atoms_fcc(element, lattice_constant, interact_len):
+
+    from ase.build import bulk
+
+    bulk_atoms = bulk(element, 'fcc', a = lattice_constant, cubic = True)
+
+    neighbor_atoms = get_neighbor_atoms(bulk         = bulk_atoms  ,
+                                        interact_len = interact_len)
+
+    return neighbor_atoms
+
+################################################################################
+# WULFF CONSTRUCTION
+################################################################################
+
+def wulff_construction(bulk                 ,
+                       size                 , 
+                       diameter             ,
+                       surface_energy_dict  ,
+                       adhesion_energy_dict = None ,
+                       fill_the_vacuum      = False,
+                       vacuum_symbol        = 'X'  ,
+                       fill_the_support     = False,
+                       support_symbol       = 'Es' ,
+                       rotate_particle      = False,
+                       support_rel_diameter = 1.4  ,
+                       translation          = None ,
+                       diameter_direction   = 'x'  ,
+                       scale_factor         = None ):
+
+    miller_index = list(surface_energy_dict.keys())
+
+    norm_factor = min([ surface_energy_dict[s] for s in surface_energy_dict ])
+        
+    if scale_factor is None:
+        scale_factor = get_scale_factor(bulk, size, diameter,
+                                  surface_energy_dict  = surface_energy_dict ,
+                                  adhesion_energy_dict = adhesion_energy_dict,
+                                  rotate_particle      = rotate_particle     ,
+                                  diameter_direction   = diameter_direction  )
+    
+    atoms = bulk[:]
+    cell_vectors = atoms.cell
+    atoms *= size
+    atoms.translate(-sum(atoms.cell)/2.)
+
+    if translation is not None:
+        if type(translation) == str and translation == 'random':
+            translation = np.random.rand(3)
+        atoms.translate(translation)
+
+    for i in range(len(miller_index)):
+        surface_energy = surface_energy_dict[miller_index[i]]
+        miller_index[i] = convert_miller_index(miller_index[i])
+        surface_energy_dict[miller_index[i]] = surface_energy
+
+    index_matrix = [[[+1, +0, +0], [+0, +1, +0], [+0, +0, +1]],
+                    [[+1, +0, +0], [+0, +0, +1], [+0, +1, +0]],
+                    [[+0, +1, +0], [+1, +0, +0], [+0, +0, +1]],
+                    [[+0, +1, +0], [+0, +0, +1], [+1, +0, +0]],
+                    [[+0, +0, +1], [+1, +0, +0], [+0, +1, +0]],
+                    [[+0, +0, +1], [+0, +1, +0], [+1, +0, +0]]]
+
+    if adhesion_energy_dict is not None:
+
+        contact_index = list(adhesion_energy_dict.keys())[0]
+        
+        adhesion_energy_dict[contact_index] /= norm_factor*scale_factor
+        
+        support_indices = [ a.index for a in atoms if np.dot(a.position,
+            contact_index) > diameter/2*adhesion_energy_dict[contact_index] ]
+        
+        if fill_the_support is True:
+            for a in [ a for a in atoms if a.index in support_indices ]:
+                a.symbol = support_symbol
+        else:
+            del atoms [ support_indices ]
+
+    for i in range(len(miller_index)):
+
+        surface_energy_dict[miller_index[i]] /= norm_factor*scale_factor
+
+        miller_vector = miller_index[i] / np.linalg.norm(miller_index[i])
+        for j in range(6):
+            index_vector = np.dot(index_matrix[j], miller_vector)
+            
+            vacuum_indices = [ a.index for a in atoms if \
+                np.dot(abs(a.position), index_vector) > \
+                diameter/2*surface_energy_dict[miller_index[i]] and \
+                a.symbol != support_symbol ]
+
+            if fill_the_vacuum is True:
+                for a in [ a for a in atoms if a.index in vacuum_indices ]:
+                    a.symbol = vacuum_symbol
+            else:
+                del atoms [ vacuum_indices ]
+                del atoms [[ a.index for a in atoms if a.symbol is \
+                    support_symbol and np.linalg.norm(a.position) > \
+                    support_rel_diameter*diameter/2. ]]
+
+    if rotate_particle is True:
+        atoms = rotate_nanoparticle(atoms, contact_index = contact_index)
+
+    atoms.translate(sum(atoms.cell)/2.)
+
+    return atoms
+
+################################################################################
+# GET SCALE FACTOR
+################################################################################
+
+def get_scale_factor(bulk, size, diameter ,
+                     surface_energy_dict  ,
+                     adhesion_energy_dict = None ,
+                     fill_the_vacuum      = False,
+                     rotate_particle      = True ,
+                     diameter_direction   = 'x'  ):
+
+    surface_energy_dict = cp.deepcopy(surface_energy_dict)
+    adhesion_energy_dict = cp.deepcopy(adhesion_energy_dict)
+
+    size = tuple([ s*2 for s in size ])
+    diameter *= 2
+
+    atoms = wulff_construction(bulk                 = bulk                ,
+                               size                 = size                , 
+                               diameter             = diameter            ,
+                               surface_energy_dict  = surface_energy_dict ,
+                               adhesion_energy_dict = adhesion_energy_dict,
+                               fill_the_vacuum      = False               ,
+                               vacuum_symbol        = 'X'                 ,
+                               fill_the_support     = False               ,
+                               support_symbol       = 'Es'                ,
+                               rotate_particle      = rotate_particle     ,
+                               support_rel_diameter = 0.                  ,
+                               scale_factor         = 1.                  )
+
+    if diameter_direction == 'x':
+        x_max = max([ a.position[0] for a in atoms ])
+        x_min = min([ a.position[0] for a in atoms ])
+        scale_factor = (x_max-x_min)/diameter
+    elif diameter_direction == 'y':
+        y_max = max([ a.position[0] for a in atoms ])
+        y_min = min([ a.position[0] for a in atoms ])
+        scale_factor = (y_max-y_min)/diameter
+    else:
+        raise NameError("Only 'x' and 'y' diameter_direction implemented")
+
+    return scale_factor
+
+################################################################################
+# ROTATE NANOPARTICLE
+################################################################################
+
+def rotate_nanoparticle(atoms, contact_index):
+    
+    vector_y = np.cross((0, 0, 1), contact_index)
+    vector_z = np.cross(contact_index, vector_y)
+
+    if np.linalg.norm(contact_index[:2]):
+        rotation_angle = (atan(contact_index[2] /
+                          np.linalg.norm(contact_index[:2])))
+        atoms.rotate(90 + rotation_angle*180/pi, vector_y)
+
+    if contact_index[0]:
+        rotation_angle = -atan(contact_index[1]/contact_index[0])
+        atoms.rotate(rotation_angle*180/pi, 'z')
+
+    return atoms
+
+################################################################################
 # MERGE SUPERCELLS
 ################################################################################
 
