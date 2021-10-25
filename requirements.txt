@@ -1,0 +1,5 @@
+ase
+numpy
+scipy
+matplotlib
+future
