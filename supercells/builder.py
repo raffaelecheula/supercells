@@ -1,15 +1,11 @@
 ################################################################################
-# Raffaele Cheula, LCCP, Politecnico di Milano, cheula.raffaele@gmail.com
-################################################################################
-
-########################################################################
 # SUPERCELL BUILDER
 # Distributed under the GPLv3 license
 # Author: Raffaele Cheula
 # cheula.raffaele@gmail.com
 # Laboratory of Catalysis and Catalytic Processes (LCCP)
 # Department of Energy, Politecnico di Milano
-########################################################################
+################################################################################
 
 from __future__ import absolute_import, division, print_function
 import numpy as np
@@ -515,10 +511,7 @@ def convert_miller_index(miller_index):
 
 def import_bulk_structure(input_bulk):
 
-    from qe_utils import read_qe_out
-
-    try: atoms = read_qe_out(input_bulk)
-    except: atoms = read(input_bulk)
+    atoms = read(input_bulk)
 
     return atoms
 
@@ -671,10 +664,7 @@ def custom_bulk(bulk_type, elements, lattice_constants):
 
 def import_slab_structure(input_slab, dimensions, vacuum = None):
 
-    from qe_utils import read_qe_out
-
-    try: atoms = read_qe_out(input_slab)
-    except: atoms = read(input_slab)
+    atoms = read(input_slab)
 
     if vacuum is not None:
         atoms.center(vacuum = 0., axis = 2)
@@ -976,7 +966,7 @@ def fix_atoms(atoms, layers_fixed, layers, symmetry = None, distance = None,
         if distance is not None:
 
             indices = [ a.index for a in atoms 
-                        if a.position[2] < slab.cell[2][2]-distance ]
+                        if a.position[2] < atoms.cell[2][2]-distance ]
             
         else:
 
@@ -1617,9 +1607,9 @@ def add_vacancy(atoms, vacancy, symmetry = None, dimensions = (1, 1),
 
     if symmetry == 'planar':
 
-        vacancy_sym[2] = atoms.cell[2][2]-vacancy_height
+        vacancy_pos[2] = atoms.cell[2][2]-vacancy_height
 
-        del atoms [[ a.index for a in atoms if np.allclose(vacancy_sym,
+        del atoms [[ a.index for a in atoms if np.allclose(vacancy_pos,
                      a.position, rtol = 1e-2, atol = epsi) ]]
 
     elif symmetry in ('symmetric', 'inversion'):

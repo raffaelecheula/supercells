@@ -9,11 +9,11 @@ import os
 import numpy as np
 from ase.constraints import FixAtoms
 from ase.calculators.espresso import Espresso
-from supercell_builder import (Bulk, calculate_kpts, convert_miller_index,
-                               cut_surface)
-from qe_utils import read_qe_inp, read_qe_out
-from nanoparticle_utils import (wire_construction, get_interact_len,
-                                get_neighbor_atoms, create_interface_wire)
+from supercells.builder import (Bulk, calculate_kpts, convert_miller_index,
+                                cut_surface)
+from supercells.utils import (wire_construction, get_interact_len,
+                              get_neighbor_atoms, create_interface_wire)
+from shape.qe_utils import read_qe_inp, read_qe_out
 
 ################################################################################
 # BULK

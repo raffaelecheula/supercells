@@ -7,9 +7,9 @@
 from __future__ import absolute_import, division, print_function
 import os
 from ase.calculators.espresso import Espresso
-from supercell_builder import calculate_kpts
-from qe_utils import read_qe_inp, read_qe_out, update_pseudos
-from supercell_utils import create_interface_slab
+from supercells.builder import calculate_kpts
+from supercells.utils import create_interface_slab
+from shape.qe_utils import read_qe_inp, read_qe_out, update_pseudos
 
 ################################################################################
 # CREATE INTERFACE SLAB

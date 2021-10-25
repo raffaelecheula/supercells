@@ -7,8 +7,9 @@
 from __future__ import absolute_import, division, print_function
 import os
 from ase import Atoms
+from ase.build import molecule
 from ase.calculators.espresso import Espresso
-from supercell_builder import Bulk, Slab, Adsorbate, Vacancy
+from supercells.builder import Bulk, Slab, Adsorbate, Vacancy
 
 ################################################################################
 # BUILD SUPERCELL
