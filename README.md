@@ -80,4 +80,4 @@
 
 ## Authors:
 
-  * Raffaele Cheula (raffaele.cheula@polimi.it)
+  * Raffaele Cheula (cheula.raffaele@gmail.com)
