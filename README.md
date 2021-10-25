@@ -1,4 +1,4 @@
-# supercell_builder
+# supercells.builder
 
 ## **Bulk:**
 
