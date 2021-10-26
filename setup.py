@@ -14,7 +14,7 @@ setuptools.setup(
     author="Raffaele Cheula",
     author_email="cheula.raffaele@gmail.com",
 
-    description="Tools for structure-dependent microkinetic modelling.",
+    description="Tools for building supercells based on the ase library.",
     long_description=readme,
     license='GPL-3.0',
 
