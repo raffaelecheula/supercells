@@ -519,31 +519,6 @@ def convert_surface_energy_dict(surface_energy_dict):
     return miller_list, e_surf_list
 
 ################################################################################
-# GET MOMENT OF INERTIA XYZ
-################################################################################
-
-def get_moments_of_inertia_xyz(atoms, center = None):
-
-    if center is None:
-        center = atoms.get_center_of_mass()
-
-    positions = atoms.get_positions()-center
-    masses = atoms.get_masses()
-
-    I = np.zeros(3)
-
-    for i in range(len(atoms)):
-
-        x, y, z = positions[i]
-        m = masses[i]
-
-        I[0] += m * (y**2 + z**2)
-        I[1] += m * (x**2 + z**2)
-        I[2] += m * (x**2 + y**2)
-
-    return I
-
-################################################################################
 # WIRE CONSTRUCTION
 ################################################################################
 
