@@ -62,7 +62,7 @@ pseudos['Rh'] = 'Rh_ONCV_PBE-1.0.oncvpsp.UPF'
 pseudos['C']  = 'C.pbe-n-kjpaw_psl.1.0.0.UPF'
 pseudos['O']  = 'O.pbe-n-kjpaw_psl.0.1.UPF'
 pseudos['H']  = 'H.pbe-rrkjus_psl.1.0.0.UPF'
-pseudos['H']  = 'Al.pbe-n-kjpaw_psl.1.0.0.UPF'
+pseudos['Al'] = 'Al.pbe-n-kjpaw_psl.1.0.0.UPF'
 
 calc = Espresso(input_data       = pw_data,
                 pseudopotentials = pseudos,
