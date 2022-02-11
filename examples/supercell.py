@@ -95,13 +95,13 @@ Create the dictionary containing the parameters of the calulation.
 """
 pw_data = {}
 
-pw_data['outdir']           = 'tmp'
+pw_data['outdir']           = 'calc'
 pw_data['forc_conv_thr']    = 1e-3
 pw_data['etot_conv_thr']    = 1e-4
 pw_data['dipfield']         = True
 
-pw_data['ecutwfc']          = 35.
-pw_data['ecutrho']          = 280.
+pw_data['ecutwfc']          = 40.
+pw_data['ecutrho']          = 320.
 pw_data['occupations']      = 'smearing'
 pw_data['smearing']         = 'mv'
 pw_data['degauss']          = 0.001
@@ -109,7 +109,7 @@ pw_data['degauss']          = 0.001
 pw_data['conv_thr']         = 1e-6
 pw_data['diagonalization']  = 'david'
 pw_data['diago_david_ndim'] = 2
-pw_data['mixing_beta']      = 0.2
+pw_data['mixing_beta']      = 0.5
 pw_data['mixing_mode']      = 'local-TF'
 pw_data['electron_maxstep'] = 500
 
@@ -139,7 +139,7 @@ calc = Espresso(input_data       = pw_data,
 Write the Quantum Espresso input file and rename it.
 """
 calc.write_input(atoms)
-os.rename('espresso.pwi', 'pw.inp')
+os.rename('espresso.pwi', 'pw.pwi')
 
 ################################################################################
 # RUN QUANTUM ESPRESSO

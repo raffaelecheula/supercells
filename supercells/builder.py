@@ -545,9 +545,9 @@ def build_bulk_structure(bulk_type, elements, lattice_constants):
         a = lattice_constants[0]
         try: c = lattice_constants[1]
         except: c = None
-
+        cubic = True if bulk_type in ('fcc', 'bcc') else False
         atoms = ase.build.bulk(elements[0], bulk_type, a = a,  c = c,
-                               cubic = True)
+                               cubic = cubic)
 
     else:
         atoms = custom_bulk(bulk_type         = bulk_type,
