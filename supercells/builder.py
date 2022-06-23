@@ -232,11 +232,11 @@ class Slab:
     def cut_slab(self, surface_vectors, big_dim = None,
                  origin = [0., 0.], epsi = 1e-5):
     
-        atoms = cut_surface(atoms           = self.atoms     ,
-                            surface_vectors = surface_vectors,
-                            big_dim         = big_dim        ,
-                            origin          = origin         ,
-                            epsi            = epsi           )
+        self.atoms = cut_surface(atoms           = self.atoms     ,
+                                 surface_vectors = surface_vectors,
+                                 big_dim         = big_dim        ,
+                                 origin          = origin         ,
+                                 epsi            = epsi           )
 
     # -------------------------------------------------------------------
     #  ROTATE SLAB
@@ -244,7 +244,7 @@ class Slab:
 
     def rotate_slab(self, rotation_angle):
     
-        atoms = rotate_slab(self.atoms, rotation_angle)
+        self.atoms = rotate_slab(self.atoms, rotation_angle)
 
     # -------------------------------------------------------------------
     #  CUT TOP SLAB
@@ -253,11 +253,11 @@ class Slab:
     def cut_top_slab(self, cut_top, starting = 'from slab bottom',
                      vacuum = None, epsi = 1e-3):
     
-        atoms = cut_top_slab(atoms    = self.atoms,
-                             cut_top  = cut_top   ,
-                             starting = starting  ,
-                             vacuum   = vacuum    ,
-                             epsi     = epsi      )
+        self.atoms = cut_top_slab(atoms    = self.atoms,
+                                  cut_top  = cut_top   ,
+                                  starting = starting  ,
+                                  vacuum   = vacuum    ,
+                                  epsi     = epsi      )
 
     # -------------------------------------------------------------------
     #  CUT BOTTOM SLAB
@@ -266,11 +266,11 @@ class Slab:
     def cut_bottom_slab(self, cut_bottom, starting = 'from slab bottom',
                         vacuum = None, epsi = 1e-3):
     
-        atoms = cut_bottom_slab(atoms      = self.atoms, 
-                                cut_bottom = cut_bottom, 
-                                starting   = starting  ,
-                                vacuum     = vacuum    , 
-                                epsi       = epsi      )
+        self.atoms = cut_bottom_slab(atoms      = self.atoms, 
+                                     cut_bottom = cut_bottom, 
+                                     starting   = starting  ,
+                                     vacuum     = vacuum    , 
+                                     epsi       = epsi      )
 
     # -------------------------------------------------------------------
     #  FIX ATOMS
@@ -313,14 +313,14 @@ class Slab:
             adsorbates = [adsorbates]
 
         for adsorbate in adsorbates:
-            atoms = add_adsorbate(atoms        = self.atoms         , 
-                                  adsorbate    = adsorbate          , 
-                                  symmetry     = symmetry           , 
-                                  dimensions   = self.dimensions    , 
-                                  bulk_type    = self.bulk.bulk_type,
-                                  miller_index = self.miller_index  , 
-                                  slab_height  = self.slab_height   ,
-                                  vacuum       = self.vacuum        )
+            self.atoms = add_adsorbate(atoms        = self.atoms         , 
+                                       adsorbate    = adsorbate          , 
+                                       symmetry     = symmetry           , 
+                                       dimensions   = self.dimensions    , 
+                                       bulk_type    = self.bulk.bulk_type,
+                                       miller_index = self.miller_index  , 
+                                       slab_height  = self.slab_height   ,
+                                       vacuum       = self.vacuum        )
 
     # -------------------------------------------------------------------
     #  ADD VACANCIES
@@ -335,12 +335,12 @@ class Slab:
             vacancies = [vacancies]
 
         for vacancy in vacancies:
-            atoms = add_vacancy(atoms      = self.atoms     ,
-                                vacancy    = vacancy        ,
-                                symmetry   = symmetry       ,
-                                dimensions = self.dimensions,
-                                vacuum     = self.vacuum    ,
-                                epsi       = epsi           )
+            self.atoms = add_vacancy(atoms      = self.atoms     ,
+                                     vacancy    = vacancy        ,
+                                     symmetry   = symmetry       ,
+                                     dimensions = self.dimensions,
+                                     vacuum     = self.vacuum    ,
+                                     epsi       = epsi           )
 
     # -------------------------------------------------------------------
     #  INVESTION SYMMETRY
@@ -348,7 +348,7 @@ class Slab:
 
     def inversion_symmetry_slab(self):
     
-        atoms = inversion_symmetry(self.atoms)
+        self.atoms = inversion_symmetry(self.atoms)
 
     # -------------------------------------------------------------------
     #  INVESTION SYMMETRY
@@ -370,7 +370,7 @@ class Slab:
 
     def sort_slab(self):
     
-        atoms = sort_slab(self.atoms)
+        self.atoms = sort_slab(self.atoms)
 
     # -------------------------------------------------------------------
     #  ADD VACUUM
