@@ -22,13 +22,13 @@ def get_interact_len(bulk, bulk_type):
 
     lattice_constant = bulk.cell[0][0]
 
-    if bulk_type is 'fcc' or 'fcc_reduced':
+    if bulk_type in ('fcc', 'fcc_reduced'):
         interact_len = sqrt(lattice_constant * 2)
 
-    elif bulk_type is 'bcc':
+    elif bulk_type == 'bcc':
         interact_len = ((lattice_constant / 2.)**2. * 3.)**0.5
 
-    elif bulk_type is 'simple_cubic':
+    elif bulk_type == 'simple_cubic':
         interact_len = lattice_constant
 
     return interact_len
@@ -156,7 +156,7 @@ def wulff_construction(bulk                 ,
                     a.symbol = vacuum_symbol
             else:
                 del atoms [ vacuum_indices ]
-                del atoms [[ a.index for a in atoms if a.symbol is \
+                del atoms [[ a.index for a in atoms if a.symbol == \
                     support_symbol and np.linalg.norm(a.position) > \
                     support_rel_diameter*diameter/2. ]]
 
